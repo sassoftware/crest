@@ -3,6 +3,7 @@
 import restlib.auth
 from restlib.http import simplehttp
 from conary.repository.netrepos import netserver
+from conary.server import server
 import sys
 
 import root
@@ -10,7 +11,7 @@ import root
 class Callback:
 
     def __init__(self, cfgFile):
-        cfg = netserver.ServerConfig()
+        cfg = server.ServerConfig()
         cfg.read(cfgFile)
         self.repos = netserver.NetworkRepositoryServer(cfg, 'BASEURL')
 
@@ -23,7 +24,8 @@ class Callback:
         if not kwargs['roleIds']:
             return response.Response(status=403)
 
-print "Running on port 9000"
-simplehttp.serve(9000, root.Controller(None, '/'),
-                 callbacks = [ restlib.auth.BasicAuthCallback(),
-                               Callback(sys.argv[1]) ])
+if __name__ == '__main__':
+    print "Running on port 9000"
+    simplehttp.serve(9000, root.Controller(None, '/'),
+                     callbacks = [ restlib.auth.BasicAuthCallback(),
+                                   Callback(sys.argv[1]) ])
