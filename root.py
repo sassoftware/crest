@@ -25,7 +25,24 @@ class ListLabels(RestController):
         l = repquery.listLabels(cu, roleIds)
         return Response(xobj.toxml(l, "Response"))
 
+class GetTrove(RestController):
+
+    modelName = "troveString"
+    modelRegex = '.*\[.*\]'
+
+    def get(self, request, cu, roleIds, troveString, *args, **kwargs):
+        name, rest = troveString.split('=', 2)
+        version, flavor = rest.split("[", 2)
+        flavor = flavor[:-1]
+
+        x = repquery.getTrove(cu, roleIds, name, version, flavor)
+        if x is None:
+            raise NotImplementedError
+
+        return Response(xobj.toxml(x, "Response"))
+
 class Controller(RestController):
 
     urls = { 'search' : SearchTroves,
-             'labels' : ListLabels }
+             'labels' : ListLabels,
+             'trove'  : GetTrove }

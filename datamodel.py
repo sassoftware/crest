@@ -30,3 +30,20 @@ class LabelList(BaseObject):
 
     def append(self, labelStr):
         self.label.append(labelStr)
+
+class FileObj(BaseObject):
+
+    path = str
+    version = str
+    fileId = str
+    pathId = str
+
+class Trove(BaseObject):
+
+    name = str
+    version = str
+    flavor = str
+    files = [ FileObj ]
+
+    def addFile(self, f):
+        self.files.append(f)

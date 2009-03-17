@@ -1,6 +1,7 @@
 import datamodel
 from conary import trove
 from conary.deps import deps
+from conary.lib.sha1helper import sha1ToString, md5ToString
 
 def searchTroves(cu, roleIds, label = None, filterSet = None):
     cu.execute("""
@@ -67,3 +68,40 @@ def listLabels(cu, roleIds):
     [ l.append(x[0]) for x in cu ]
 
     return l
+
+def getTrove(cu, roleIds, name, version, flavor):
+    cu.execute("""
+        SELECT instanceId FROM Instances
+            JOIN Items USING (itemId)
+            JOIN Versions ON (Instances.versionId = Versions.versionId)
+            JOIN Flavors ON (Instances.flavorId = Flavors.flavorId)
+        WHERE
+            item = ? AND version = ? AND flavor = ?
+    """, name, version, flavor)
+
+    l = [ x[0] for x in cu ]
+    if not l:
+        return None
+
+    instanceId = l[0]
+
+    t = datamodel.Trove(name = name, version = version, flavor = flavor)
+
+    cu.execute("""
+        SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
+            JOIN Versions USING (versionId)
+            JOIN FileStreams ON (TroveFiles.streamId = FileStreams.streamId)
+            JOIN FilePaths ON (TroveFiles.filePathId = FilePaths.filePathId)
+            JOIN DirNames ON (FilePaths.dirNameId = DirNames.dirNameId)
+            JOIN Basenames ON (FilePaths.baseNameId = Basenames.baseNameId)
+    """)
+
+    for (dirName, baseName, fileVersion, pathId, fileId) in cu:
+        fileObj = datamodel.FileObj(
+                        path = dirName + '/' + baseName,
+                        version = fileVersion,
+                        pathId = md5ToString(cu.frombinary(pathId)),
+                        fileId = sha1ToString(cu.frombinary(fileId)))
+        t.addFile(fileObj)
+
+    return t
