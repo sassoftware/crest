@@ -27,9 +27,12 @@ class ReposCallback:
 
 class AuthCallback(restlib.auth.BasicAuthCallback):
 
-    def processAuth(self, request):
-        if not request.auth[0]:
-            request.auth = ('anonymous', 'anonymous')
+    def getAuth(self, request):
+        auth = restlib.auth.BasicAuthCallback.getAuth(self, request)
+        if auth is None:
+            auth = ('anonymous', 'anonymous')
+
+        return auth
 
 if __name__ == '__main__':
     print "Running on port 9000"

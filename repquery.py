@@ -130,6 +130,18 @@ def getTrove(cu, roleIds, name, version, flavor, baseUrl = None,
                         baseUrl = baseUrl, thisHost = thisHost)
         t.addFile(fileObj)
 
+    cu.execute("""
+        SELECT item, version, flavor FROM TroveTroves
+            JOIN Instances ON (Instances.instanceId = TroveTroves.includedId)
+            JOIN Items USING (itemId)
+            JOIN Versions ON (Versions.versionId = Instances.versionId)
+            JOIN Flavors ON (Flavors.flavorId = Instances.flavorId)
+            WHERE TroveTroves.instanceId = ?
+    """, instanceId)
+
+    for (subName, subVersion, subFlavor) in cu:
+        t.addReferencedTrove(subName, subVersion, subFlavor, baseUrl = baseUrl)
+
     return datamodel.TroveList(trove = [ t ])
 
 def _getFileStream(cu, roleIds, fileId):

@@ -1,8 +1,13 @@
 from restlib.controller import RestController
-from restlib.response import Response
+from restlib import response
 from xobj import xobj
 
 import repquery
+
+class Response(response.Response):
+    def __init__(self, content, contentType='text/xml; charset=utf-8'):
+        response.Response.__init__(self, content, contentType)
+        self.headers['cache-control'] = 'private, must-revalidate, max-age=0'
 
 class SearchTroves(RestController):
 

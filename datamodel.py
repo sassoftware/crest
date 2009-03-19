@@ -26,7 +26,7 @@ class TroveIdent(BaseObject):
     def __init__(self, baseUrl = None, **kwargs):
         BaseObject.__init__(self, **kwargs)
         if baseUrl:
-            self.id = baseUrl + "%s=%s[%s]" % (self.name, self.version,
+            self.id = baseUrl + "trove/%s=%s[%s]" % (self.name, self.version,
                                                self.flavor)
 
 class TroveIdentList(BaseObject):
@@ -68,9 +68,14 @@ class FileInTrove(BaseObject):
 class SingleTrove(TroveIdent):
 
     file = [ FileInTrove ]
+    trove = [ TroveIdent ]
 
     def addFile(self, f):
         self.file.append(f)
+
+    def addReferencedTrove(self, name, version, flavor, baseUrl = None):
+        self.trove.append(TroveIdent(name = name, version = version,
+                                     flavor = flavor, baseUrl = baseUrl))
 
 class TroveList(BaseObject):
 
