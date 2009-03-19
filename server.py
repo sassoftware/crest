@@ -8,7 +8,7 @@ import sys
 
 import root
 
-class Callback:
+class ReposCallback:
 
     def __init__(self, cfgFile):
         cfg = server.ServerConfig()
@@ -25,8 +25,14 @@ class Callback:
         if not kwargs['roleIds']:
             return response.Response(status=403)
 
+class AuthCallback(restlib.auth.BasicAuthCallback):
+
+    def processAuth(self, request):
+        if not request.auth[0]:
+            request.auth = ('anonymous', 'anonymous')
+
 if __name__ == '__main__':
     print "Running on port 9000"
     simplehttp.serve(9000, root.Controller(None, '/'),
-                     callbacks = [ restlib.auth.BasicAuthCallback(),
-                                   Callback(sys.argv[1]) ])
+                     callbacks = [ AuthCallback(),
+                                   ReposCallback(sys.argv[1]) ])
