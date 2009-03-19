@@ -17,6 +17,7 @@ class Callback:
 
     def processMethod(self, request, method, args, kwargs):
         cu = self.repos.db.cursor()
+        kwargs['repos'] = self.repos
         kwargs['roleIds'] = self.repos.auth.getAuthRoles(
                                     cu, request.auth + (None, None))
         kwargs['cu'] = cu

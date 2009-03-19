@@ -1,22 +1,39 @@
 import datamodel
-from conary import trove
+from conary import files, trove, versions
 from conary.deps import deps
-from conary.lib.sha1helper import sha1ToString, md5ToString
+from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
 
-def searchTroves(cu, roleIds, label = None, filterSet = None):
-    cu.execute("""
-        SELECT DISTINCT item, version, flavor
-        FROM UserGroupInstancesCache AS ugi
-            join Instances using (instanceId)
-            join Nodes using (itemId, versionId)
-            join LabelMap using (branchId)
-            join Labels using (labelId)
-            join Items on (instances.itemId = Items.itemId)
-            join Versions on (instances.versionId = Versions.versionId)
-            join Flavors on (instances.flavorId = Flavors.flavorId)
-            where ugi.userGroupId in (%s) and
-                Labels.label = ?
-    """ % ",".join( str(x) for x in roleIds), label)
+def searchTroves(cu, roleIds, label = None, filterSet = None, baseUrl = None,
+                 latest = True):
+    if latest:
+        cu.execute("""
+            SELECT item, version, flavor FROM
+                (SELECT DISTINCT itemId, versionId, flavorId FROM Labels
+                    JOIN LabelMap USING (labelId)
+                    JOIN LatestCache USING (itemId, branchId)
+                    WHERE label=? AND
+                          LatestCache.latestType = 1 AND
+                          LatestCache.userGroupId in (%s))
+                AS idTable JOIN
+                Items USING (itemId) JOIN
+                Versions ON (idTable.versionId = Versions.versionId) JOIN
+                Flavors ON (idTable.flavorId = Flavors.flavorId)
+        """ % ",".join( str(x) for x in roleIds), label)
+    else:
+        cu.execute("""
+            SELECT item, version, flavor FROM
+                (SELECT DISTINCT itemId, versionId, flavorId FROM Labels
+                    JOIN LabelMap USING (labelId)
+                    JOIN Nodes USING (itemid, branchid)
+                    JOIN Instances USING (itemid, versionid)
+                    JOIN usergroupinstancescache AS ugi USING (instanceid)
+                    WHERE label=? AND
+                          ugi.userGroupId in (%s)) 
+                AS idTable JOIN
+                Items USING (itemId) JOIN
+                Versions ON (idTable.versionId = Versions.versionId) JOIN
+                Flavors ON (idTable.flavorId = Flavors.flavorId)
+        """ % ",".join( str(x) for x in roleIds), label)
 
     filters = []
     if 'group' in filterSet:
@@ -38,7 +55,7 @@ def searchTroves(cu, roleIds, label = None, filterSet = None):
     if filters:
         filters.append(None)
 
-    troveList = datamodel.TroveList()
+    troveList = datamodel.TroveIdentList()
     for (name, version, flavor) in cu:
         if filters:
             for f in filters:
@@ -50,34 +67,40 @@ def searchTroves(cu, roleIds, label = None, filterSet = None):
 
         troveList.trove.append(datamodel.TroveIdent(name = name,
                                                     version = version,
-                                                    flavor = flavor))
+                                                    flavor = flavor,
+                                                    baseUrl = baseUrl))
 
     return troveList
 
 def listLabels(cu, roleIds):
     cu.execute("""
-        SELECT distinct(label) FROM UserGroupInstancesCache AS ugi
-            join Instances using (instanceId)
-            join Nodes using (itemId, versionId)
-            join LabelMap using (branchId)
-            join Labels using (labelId)
-            where ugi.userGroupId in (%s)
+        SELECT branch FROM
+            (SELECT DISTINCT branchId FROM LatestCache
+             WHERE userGroupId IN (%s) AND latestType=1) AS AvailBranches
+            JOIN Branches USING(branchId)
     """ % ",".join( str(x) for x in roleIds))
 
+    labels = set( str(versions.VersionFromString(x[0]).label()) for x in cu )
+
     l = datamodel.LabelList()
-    [ l.append(x[0]) for x in cu ]
+    [ l.append(x) for x in labels ]
 
     return l
 
-def getTrove(cu, roleIds, name, version, flavor):
+def getTrove(cu, roleIds, name, version, flavor, baseUrl = None,
+             thisHost = None):
     cu.execute("""
-        SELECT instanceId FROM Instances
+        SELECT Instances.instanceId FROM Instances
             JOIN Items USING (itemId)
             JOIN Versions ON (Instances.versionId = Versions.versionId)
             JOIN Flavors ON (Instances.flavorId = Flavors.flavorId)
+            JOIN UserGroupInstancesCache AS ugi
+                ON (instances.instanceId = ugi.instanceId AND
+                    ugi.userGroupId in (%s))
         WHERE
             item = ? AND version = ? AND flavor = ?
-    """, name, version, flavor)
+    """ % ",".join( str(x) for x in roleIds), name, version,
+        deps.parseFlavor(flavor).freeze())
 
     l = [ x[0] for x in cu ]
     if not l:
@@ -85,7 +108,8 @@ def getTrove(cu, roleIds, name, version, flavor):
 
     instanceId = l[0]
 
-    t = datamodel.Trove(name = name, version = version, flavor = flavor)
+    t = datamodel.SingleTrove(name = name, version = version, flavor = flavor,
+                              baseUrl = baseUrl)
 
     cu.execute("""
         SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
@@ -94,14 +118,70 @@ def getTrove(cu, roleIds, name, version, flavor):
             JOIN FilePaths ON (TroveFiles.filePathId = FilePaths.filePathId)
             JOIN DirNames ON (FilePaths.dirNameId = DirNames.dirNameId)
             JOIN Basenames ON (FilePaths.baseNameId = Basenames.baseNameId)
-    """)
+            WHERE TroveFiles.instanceId = ?
+    """, instanceId)
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
-        fileObj = datamodel.FileObj(
+        fileObj = datamodel.FileInTrove(
                         path = dirName + '/' + baseName,
                         version = fileVersion,
                         pathId = md5ToString(cu.frombinary(pathId)),
-                        fileId = sha1ToString(cu.frombinary(fileId)))
+                        fileId = sha1ToString(cu.frombinary(fileId)),
+                        baseUrl = baseUrl, thisHost = thisHost)
         t.addFile(fileObj)
 
-    return t
+    return datamodel.TroveList(trove = [ t ])
+
+def _getFileStream(cu, roleIds, fileId):
+    cu.execute("""
+        SELECT FileStreams.stream
+        FROM FileStreams
+        JOIN TroveFiles USING (streamId)
+        JOIN UserGroupInstancesCache ON
+            TroveFiles.instanceId = UserGroupInstancesCache.instanceId
+        WHERE FileStreams.stream IS NOT NULL
+          AND FileStreams.fileId = ?
+          AND UserGroupInstancesCache.userGroupId IN (%(roleids)s)
+          LIMIT 1
+        """ % { 'roleids' : ", ".join("%d" % x for x in roleIds) },
+        cu.binary(sha1FromString(fileId)))
+
+    l = list(cu)
+    if not l:
+        raise NotImplementedError
+
+    return cu.frombinary(l[0][0])
+
+def getFileInfo(cu, roleIds, fileId, baseUrl = None):
+    stream = _getFileStream(cu, roleIds, fileId)
+    f = files.ThawFile(stream, None)
+
+    if f.lsTag == '-':
+        fx = datamodel.RegularFile(owner = f.inode.owner(),
+                                   group = f.inode.group(),
+                                   mtime = f.inode.mtime(),
+                                   perms = f.inode.perms(),
+                                   size = int(f.contents.size()),
+                                   sha1 = sha1ToString(f.contents.sha1()),
+                                   fileId = fileId, baseUrl = baseUrl)
+    elif f.lsTag == 'l':
+        fx = datamodel.SymlinkFile(owner = f.inode.owner(),
+                                   group = f.inode.group(),
+                                   mtime = f.inode.mtime(),
+                                   perms = f.inode.perms(),
+                                   target = f.target())
+    else:
+        assert(0)
+
+    l = datamodel.FileList()
+    l.append(fx)
+
+    return l
+
+def getFileSha1(cu, roleIds, fileId):
+    stream = _getFileStream(cu, roleIds, fileId)
+    if not files.frozenFileHasContents(stream):
+        return None
+
+    sha1 = files.frozenFileContentInfo(stream).sha1()
+    return sha1ToString(sha1)
