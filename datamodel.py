@@ -23,11 +23,14 @@ class TroveIdent(BaseObject):
     version = str
     flavor = str
 
-    def __init__(self, baseUrl = None, **kwargs):
-        BaseObject.__init__(self, **kwargs)
-        if baseUrl:
-            self.id = baseUrl + "trove/%s=%s[%s]" % (self.name, self.version,
-                                               self.flavor)
+    def __init__(self, version = None, mkUrl = None, **kwargs):
+        BaseObject.__init__(self, version = version, **kwargs)
+        if mkUrl:
+            ver = versions.VersionFromString(version)
+            host = ver.trailingLabel().getHost()
+            self.id = mkUrl('trove', "%s=%s[%s]" % (self.name, self.version,
+                                                    self.flavor),
+                            host = host)
 
 class TroveIdentList(BaseObject):
 
@@ -53,17 +56,11 @@ class FileInTrove(BaseObject):
     fileId = str
     pathId = str
 
-    def __init__(self, baseUrl = None, fileId = None, version = None,
+    def __init__(self, mkUrl = None, fileId = None, version = None,
                  thisHost = None, **kwargs):
         BaseObject.__init__(self, fileId = fileId, version = version, **kwargs)
-        if baseUrl:
-            host = versions.VersionFromString(version).trailingLabel().getHost()
-            if host == thisHost:
-                prefix = baseUrl
-            else:
-                prefix = "http://%s/" % host
-
-            self.id = ("%sfile/%s/info" % (prefix, self.fileId))
+        if mkUrl:
+            self.id = mkUrl('file', self.fileId, 'info')
 
 class SingleTrove(TroveIdent):
 
@@ -73,9 +70,9 @@ class SingleTrove(TroveIdent):
     def addFile(self, f):
         self.file.append(f)
 
-    def addReferencedTrove(self, name, version, flavor, baseUrl = None):
+    def addReferencedTrove(self, name, version, flavor, mkUrl = None):
         self.trove.append(TroveIdent(name = name, version = version,
-                                     flavor = flavor, baseUrl = baseUrl))
+                                     flavor = flavor, mkUrl = mkUrl))
 
 class TroveList(BaseObject):
 
@@ -83,10 +80,17 @@ class TroveList(BaseObject):
 
 class FileObj(BaseObject):
 
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
+
     owner = str
     group = str
     mtime = int
     perms = int
+
+    def __init__(self, mkUrl = None, fileId = None, **kwargs):
+        BaseObject.__init__(self, **kwargs)
+        if mkUrl:
+            self.id = mkUrl('file', fileId, 'info')
 
 class XObjLong(long):
 
@@ -101,11 +105,10 @@ class RegularFile(FileObj):
     size = XObjLong
     sha1 = str
 
-    def __init__(self, baseUrl = None, fileId = None, sha1 = None, **kwargs):
-        FileObj.__init__(self, **kwargs)
-        if baseUrl:
-            self.href = "%s/file/%s/content" % (baseUrl, fileId)
-            self.id = "%s/file/%s/info" % (baseUrl, fileId)
+    def __init__(self, mkUrl = None, fileId = None, sha1 = None, **kwargs):
+        FileObj.__init__(self, mkUrl = mkUrl, fileId = fileId, **kwargs)
+        if mkUrl:
+            self.href = mkUrl('file', fileId, 'content')
 
 class SymlinkFile(FileObj):
 

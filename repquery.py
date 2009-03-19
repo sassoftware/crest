@@ -3,7 +3,7 @@ from conary import files, trove, versions
 from conary.deps import deps
 from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
 
-def searchTroves(cu, roleIds, label = None, filterSet = None, baseUrl = None,
+def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                  latest = True):
     if latest:
         cu.execute("""
@@ -68,7 +68,7 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, baseUrl = None,
         troveList.trove.append(datamodel.TroveIdent(name = name,
                                                     version = version,
                                                     flavor = flavor,
-                                                    baseUrl = baseUrl))
+                                                    mkUrl = mkUrl))
 
     return troveList
 
@@ -87,7 +87,7 @@ def listLabels(cu, roleIds):
 
     return l
 
-def getTrove(cu, roleIds, name, version, flavor, baseUrl = None,
+def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
              thisHost = None):
     cu.execute("""
         SELECT Instances.instanceId FROM Instances
@@ -109,7 +109,7 @@ def getTrove(cu, roleIds, name, version, flavor, baseUrl = None,
     instanceId = l[0]
 
     t = datamodel.SingleTrove(name = name, version = version, flavor = flavor,
-                              baseUrl = baseUrl)
+                              mkUrl = mkUrl)
 
     cu.execute("""
         SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
@@ -127,7 +127,7 @@ def getTrove(cu, roleIds, name, version, flavor, baseUrl = None,
                         version = fileVersion,
                         pathId = md5ToString(cu.frombinary(pathId)),
                         fileId = sha1ToString(cu.frombinary(fileId)),
-                        baseUrl = baseUrl, thisHost = thisHost)
+                        mkUrl = mkUrl, thisHost = thisHost)
         t.addFile(fileObj)
 
     cu.execute("""
@@ -140,7 +140,7 @@ def getTrove(cu, roleIds, name, version, flavor, baseUrl = None,
     """, instanceId)
 
     for (subName, subVersion, subFlavor) in cu:
-        t.addReferencedTrove(subName, subVersion, subFlavor, baseUrl = baseUrl)
+        t.addReferencedTrove(subName, subVersion, subFlavor, mkUrl = mkUrl)
 
     return datamodel.TroveList(trove = [ t ])
 
@@ -164,7 +164,7 @@ def _getFileStream(cu, roleIds, fileId):
 
     return cu.frombinary(l[0][0])
 
-def getFileInfo(cu, roleIds, fileId, baseUrl = None):
+def getFileInfo(cu, roleIds, fileId, mkUrl = None):
     stream = _getFileStream(cu, roleIds, fileId)
     f = files.ThawFile(stream, None)
 
@@ -175,7 +175,8 @@ def getFileInfo(cu, roleIds, fileId, baseUrl = None):
                                    perms = f.inode.perms(),
                                    size = int(f.contents.size()),
                                    sha1 = sha1ToString(f.contents.sha1()),
-                                   fileId = fileId, baseUrl = baseUrl)
+                                   fileId = fileId,
+                                   mkUrl = mkUrl)
     elif f.lsTag == 'l':
         fx = datamodel.SymlinkFile(owner = f.inode.owner(),
                                    group = f.inode.group(),
