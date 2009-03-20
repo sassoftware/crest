@@ -37,6 +37,7 @@ class RestController(controller.RestController):
 class SearchTroves(RestController):
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
+        import epdb;epdb.st()
         label = request.GET.get('label', None)
         types = request.GET.get('type', [])
         latest = request.GET.get('latest', 1)
