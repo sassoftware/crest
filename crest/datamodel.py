@@ -65,7 +65,7 @@ class LabelList(BaseObject):
     def append(self, labelStr):
         self.label.append(labelStr)
 
-class FileId(xobj.XObjStr):
+class FileId(xobj.XObj):
 
     _xobj = xobj.XObjMetadata(attributes = { 'href' : str })
 
