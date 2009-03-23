@@ -29,9 +29,7 @@ class BaseObject(object):
             else:
                 raise TypeError, 'unknown constructor parameter %s' % key
 
-class TroveIdent(BaseObject):
-
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
+class BaseTroveInfo(BaseObject):
 
     name = str
     version = str
@@ -46,12 +44,22 @@ class TroveIdent(BaseObject):
                                                     self.flavor),
                             host = host)
 
+class TroveIdent(BaseTroveInfo):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
+
 class TroveIdentList(BaseObject):
 
-    trove = [ TroveIdent ]
+    _xobj = xobj.XObjMetadata(tag = 'troveList')
+    troveList = [ TroveIdent ]
+
+    def append(self, name = None, version = None, flavor = None, mkUrl = None):
+        self.troveList.append(TroveIdent(name = name, version = version,
+                                         flavor = flavor, mkUrl = mkUrl))
 
 class LabelList(BaseObject):
 
+    _xobj = xobj.XObjMetadata(tag = 'LabelList')
     label = [ str ]
 
     def append(self, labelStr):
@@ -74,23 +82,25 @@ class FileInTrove(BaseObject):
                  thisHost = None, **kwargs):
         BaseObject.__init__(self, fileId = fileId, version = version, **kwargs)
         if mkUrl:
-            self.id = mkUrl('file', self.fileId, 'info')
+            host = versions.VersionFromString(version).trailingLabel().getHost()
+            self.id = mkUrl('file', self.fileId, 'info', host = host)
+
+class ReferencedTrove(BaseTroveInfo):
+
+    pass
 
 class SingleTrove(TroveIdent):
 
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Trove')
     file = [ FileInTrove ]
-    trove = [ TroveIdent ]
+    trove = [ ReferencedTrove ]
 
     def addFile(self, f):
         self.file.append(f)
 
     def addReferencedTrove(self, name, version, flavor, mkUrl = None):
-        self.trove.append(TroveIdent(name = name, version = version,
-                                     flavor = flavor, mkUrl = mkUrl))
-
-class TroveList(BaseObject):
-
-    trove = [ SingleTrove ]
+        self.trove.append(ReferencedTrove(name = name, version = version,
+                                           flavor = flavor, mkUrl = mkUrl))
 
 class FileObj(BaseObject):
 
@@ -113,26 +123,40 @@ class XObjLong(long):
 class RegularFile(FileObj):
 
     _xobj = xobj.XObjMetadata(attributes = { 'href' : str,
-                                             'id' : str })
-    _xobj.tag = 'File'
-
+                                             'id' : str },
+                              tag = 'File')
     size = XObjLong
     sha1 = str
 
-    def __init__(self, mkUrl = None, fileId = None, sha1 = None, **kwargs):
+    def __init__(self, mkUrl = None, fileId = None, **kwargs):
         FileObj.__init__(self, mkUrl = mkUrl, fileId = fileId, **kwargs)
         if mkUrl:
             self.href = mkUrl('file', fileId, 'content')
 
+class Directory(FileObj):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Directory')
+
+class Socket(FileObj):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Socket')
+
+class NamedPipe(FileObj):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'NamedPipe')
+
 class SymlinkFile(FileObj):
 
-    _xobj = xobj.XObjMetadata()
-    _xobj.tag = 'Symlink'
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Symlink')
     target = str
 
-class FileList(BaseObject):
+class _DeviceFile(FileObj):
 
-    all = [ object ]
+    major = int
+    minor = int
 
-    def append(self, o):
-        self.all.append(o)
+class BlockDeviceFile(_DeviceFile):
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'BlockDevice')
+
+class CharacterDeviceFile(_DeviceFile):
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'CharDevice')

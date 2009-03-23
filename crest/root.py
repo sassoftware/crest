@@ -37,7 +37,6 @@ class RestController(controller.RestController):
 class SearchTroves(RestController):
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
-        import epdb;epdb.st()
         label = request.GET.get('label', None)
         types = request.GET.get('type', [])
         latest = request.GET.get('latest', 1)
@@ -52,13 +51,13 @@ class SearchTroves(RestController):
                                        filterSet = types, latest = latest,
                                        mkUrl = self.urlF(request))
 
-        return Response(xobj.toxml(troves, "Response"))
+        return Response(xobj.toxml(troves, None))
 
 class ListLabels(RestController):
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         l = repquery.listLabels(cu, roleIds)
-        return Response(xobj.toxml(l, "Response"))
+        return Response(xobj.toxml(l, None))
 
 class GetTrove(RestController):
 
@@ -77,7 +76,7 @@ class GetTrove(RestController):
         if x is None:
             raise NotImplementedError
 
-        return Response(xobj.toxml(x, "Response"))
+        return Response(xobj.toxml(x, None))
 
 class GetFile(RestController):
 
@@ -91,7 +90,7 @@ class GetFile(RestController):
         if x is None:
             raise NotImplementedError
 
-        return Response(xobj.toxml(x, "Response"))
+        return Response(xobj.toxml(x, None))
 
     def content(self, request, cu, roleIds = None, fileId = None,
                 repos = None, **kwargs):

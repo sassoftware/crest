@@ -32,13 +32,16 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                 Items USING (itemId) JOIN
                 Versions ON (idTable.versionId = Versions.versionId) JOIN
                 Flavors ON (idTable.flavorId = Flavors.flavorId)
+                ORDER BY item, version, flavor
         """ % ",".join( str(x) for x in roleIds), label)
     else:
         cu.execute("""
             SELECT item, version, flavor FROM
-                (SELECT DISTINCT itemId, versionId, flavorId FROM Labels
+                (SELECT DISTINCT Instances.itemId AS itemId,
+                                 Instances.versionId AS versionId,
+                                 Instances.flavorId AS flavorId FROM Labels
                     JOIN LabelMap USING (labelId)
-                    JOIN Nodes USING (itemid, branchid)
+                    JOIN Nodes USING (itemId, branchid)
                     JOIN Instances USING (itemid, versionid)
                     JOIN usergroupinstancescache AS ugi USING (instanceid)
                     WHERE label=? AND
@@ -47,6 +50,7 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                 Items USING (itemId) JOIN
                 Versions ON (idTable.versionId = Versions.versionId) JOIN
                 Flavors ON (idTable.flavorId = Flavors.flavorId)
+                ORDER BY item, version, flavor
         """ % ",".join( str(x) for x in roleIds), label)
 
     filters = []
@@ -79,10 +83,8 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
 
         flavor = str(deps.ThawFlavor(flavor))
 
-        troveList.trove.append(datamodel.TroveIdent(name = name,
-                                                    version = version,
-                                                    flavor = flavor,
-                                                    mkUrl = mkUrl))
+        troveList.append(name = name, version = version, flavor = flavor,
+                         mkUrl = mkUrl)
 
     return troveList
 
@@ -97,7 +99,7 @@ def listLabels(cu, roleIds):
     labels = set( str(versions.VersionFromString(x[0]).label()) for x in cu )
 
     l = datamodel.LabelList()
-    [ l.append(x) for x in labels ]
+    [ l.append(x) for x in sorted(labels) ]
 
     return l
 
@@ -132,7 +134,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             JOIN FilePaths ON (TroveFiles.filePathId = FilePaths.filePathId)
             JOIN DirNames ON (FilePaths.dirNameId = DirNames.dirNameId)
             JOIN Basenames ON (FilePaths.baseNameId = Basenames.baseNameId)
-            WHERE TroveFiles.instanceId = ?
+            WHERE TroveFiles.instanceId = ? ORDER BY dirName, basename
     """, instanceId)
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
@@ -150,13 +152,14 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             JOIN Items USING (itemId)
             JOIN Versions ON (Versions.versionId = Instances.versionId)
             JOIN Flavors ON (Flavors.flavorId = Instances.flavorId)
-            WHERE TroveTroves.instanceId = ?
+            WHERE TroveTroves.instanceId = ? ORDER BY item, version, flavor
     """, instanceId)
 
     for (subName, subVersion, subFlavor) in cu:
+        subFlavor = str(deps.ThawFlavor(subFlavor))
         t.addReferencedTrove(subName, subVersion, subFlavor, mkUrl = mkUrl)
 
-    return datamodel.TroveList(trove = [ t ])
+    return t
 
 def _getFileStream(cu, roleIds, fileId):
     cu.execute("""
@@ -174,36 +177,44 @@ def _getFileStream(cu, roleIds, fileId):
 
     l = list(cu)
     if not l:
-        raise NotImplementedError
+        return None
 
     return cu.frombinary(l[0][0])
 
 def getFileInfo(cu, roleIds, fileId, mkUrl = None):
     stream = _getFileStream(cu, roleIds, fileId)
+    if not stream:
+        return None
+
     f = files.ThawFile(stream, None)
 
+    args = { 'owner' : f.inode.owner(), 'group' : f.inode.group(),
+             'mtime' : f.inode.mtime(), 'perms' : f.inode.perms(),
+             'fileId' : fileId, 'mkUrl' : mkUrl }
+
     if f.lsTag == '-':
-        fx = datamodel.RegularFile(owner = f.inode.owner(),
-                                   group = f.inode.group(),
-                                   mtime = f.inode.mtime(),
-                                   perms = f.inode.perms(),
-                                   size = int(f.contents.size()),
+        fx = datamodel.RegularFile(size = int(f.contents.size()),
                                    sha1 = sha1ToString(f.contents.sha1()),
-                                   fileId = fileId,
-                                   mkUrl = mkUrl)
+                                   **args)
     elif f.lsTag == 'l':
-        fx = datamodel.SymlinkFile(owner = f.inode.owner(),
-                                   group = f.inode.group(),
-                                   mtime = f.inode.mtime(),
-                                   perms = f.inode.perms(),
-                                   target = f.target())
+        fx = datamodel.SymlinkFile(target = f.target(), **args)
+    elif f.lsTag == 'd':
+        fx = datamodel.Directory(**args)
+    elif f.lsTag == 'b':
+        fx = datamodel.BlockDeviceFile(major = f.devt.major(),
+                                       minor = f.devt.minor(), **args)
+    elif f.lsTag == 'c':
+        fx = datamodel.CharacterDeviceFile(major = f.devt.major(),
+                                           minor = f.devt.minor(), **args)
+    elif f.lsTag == 's':
+        fx = datamodel.Socket(**args)
+    elif f.lsTag == 'p':
+        fx = datamodel.NamedPipe(**args)
     else:
-        assert(0)
+        # This really shouldn't happen
+        raise NotImplementedError
 
-    l = datamodel.FileList()
-    l.append(fx)
-
-    return l
+    return fx
 
 def getFileSha1(cu, roleIds, fileId):
     stream = _getFileStream(cu, roleIds, fileId)
