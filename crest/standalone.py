@@ -23,10 +23,8 @@ import root
 
 class ReposCallback:
 
-    def __init__(self, cfgFile):
-        cfg = server.ServerConfig()
-        cfg.read(cfgFile)
-        self.repos = netserver.NetworkRepositoryServer(cfg, 'BASEURL')
+    def __init__(self, repos):
+        self.repos = repos
 
     def processMethod(self, request, method, args, kwargs):
         cu = self.repos.db.cursor()
@@ -46,6 +44,19 @@ class AuthCallback(restlib.auth.BasicAuthCallback):
             auth = ('anonymous', 'anonymous')
 
         return auth
+
+class StandaloneHandler:
+
+    def handle(self, req):
+        return self.h.handle(req, req.unparsed_uri[self.prefixLen:])
+
+    def __init__(self, rootUri, repos):
+        self.prefix = rootUri
+        self.prefixLen = len(self.prefix)
+        self.h = simplehttp.SimpleHttpHandler(root.Controller(None,
+                                                              self.prefix))
+        self.h.addCallback(AuthCallback())
+        self.h.addCallback(ReposCallback(repos))
 
 if __name__ == '__main__':
     print "Running on port 9000"
