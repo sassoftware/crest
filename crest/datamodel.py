@@ -50,7 +50,7 @@ class TroveIdent(BaseTroveInfo):
 
 class TroveIdentList(BaseObject):
 
-    _xobj = xobj.XObjMetadata(tag = 'troveList')
+    _xobj = xobj.XObjMetadata(tag = 'trovelist')
     troveList = [ TroveIdent ]
 
     def append(self, name = None, version = None, flavor = None, mkUrl = None):
@@ -59,7 +59,7 @@ class TroveIdentList(BaseObject):
 
 class LabelList(BaseObject):
 
-    _xobj = xobj.XObjMetadata(tag = 'LabelList')
+    _xobj = xobj.XObjMetadata(tag = 'labellist')
     label = [ str ]
 
     def append(self, labelStr):
@@ -91,7 +91,7 @@ class ReferencedTrove(BaseTroveInfo):
 
 class SingleTrove(TroveIdent):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Trove')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
     file = [ FileInTrove ]
     trove = [ ReferencedTrove ]
 
@@ -124,7 +124,7 @@ class RegularFile(FileObj):
 
     _xobj = xobj.XObjMetadata(attributes = { 'href' : str,
                                              'id' : str },
-                              tag = 'File')
+                              tag = 'file')
     size = XObjLong
     sha1 = str
 
@@ -135,19 +135,19 @@ class RegularFile(FileObj):
 
 class Directory(FileObj):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Directory')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'directory')
 
 class Socket(FileObj):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Socket')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'socket')
 
 class NamedPipe(FileObj):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'NamedPipe')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'namedpipe')
 
 class SymlinkFile(FileObj):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'Symlink')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'symlink')
     target = str
 
 class _DeviceFile(FileObj):
@@ -156,7 +156,7 @@ class _DeviceFile(FileObj):
     minor = int
 
 class BlockDeviceFile(_DeviceFile):
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'BlockDevice')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'blockdevice')
 
 class CharacterDeviceFile(_DeviceFile):
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'CharDevice')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'chardevice')
