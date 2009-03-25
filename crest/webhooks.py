@@ -15,6 +15,7 @@
 
 import restlib.auth
 from restlib.http import simplehttp
+from restlib.http import modpython as restmodpython
 from conary.repository.netrepos import netserver
 from conary.server import server
 import sys
@@ -47,19 +48,18 @@ class AuthCallback(restlib.auth.BasicAuthCallback):
 
 class StandaloneHandler:
 
-    def handle(self, req):
-        return self.h.handle(req, req.unparsed_uri[self.prefixLen:])
+    handlerClass = simplehttp.SimpleHttpHandler
+
+    def handle(self, req, path):
+        return self.h.handle(req, path[self.prefixLen:])
 
     def __init__(self, rootUri, repos):
         self.prefix = rootUri
         self.prefixLen = len(self.prefix)
-        self.h = simplehttp.SimpleHttpHandler(root.Controller(None,
-                                                              self.prefix))
+        self.h = self.handlerClass(root.Controller(None, self.prefix))
         self.h.addCallback(AuthCallback())
         self.h.addCallback(ReposCallback(repos))
 
-if __name__ == '__main__':
-    print "Running on port 9000"
-    simplehttp.serve(9000, root.Controller(None, '/'),
-                     callbacks = [ AuthCallback(),
-                                   ReposCallback(sys.argv[1]) ])
+class ApacheHandler(StandaloneHandler):
+
+    handlerClass = restmodpython.ModPythonHttpHandler
