@@ -94,6 +94,9 @@ class SingleTrove(TroveIdent):
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
     file = [ FileInTrove ]
     trove = [ ReferencedTrove ]
+    source = BaseTroveInfo
+    buildtime = int
+    clonedfrom = [ BaseTroveInfo ]
 
     def addFile(self, f):
         self.file.append(f)
@@ -101,6 +104,10 @@ class SingleTrove(TroveIdent):
     def addReferencedTrove(self, name, version, flavor, mkUrl = None):
         self.trove.append(ReferencedTrove(name = name, version = version,
                                            flavor = flavor, mkUrl = mkUrl))
+
+    def addClonedFrom(self, name, version, flavor, mkUrl = None):
+        self.clonedfrom.append(BaseTroveInfo(name = name, version = version,
+                                             flavor = flavor, mkUrl = mkUrl))
 
 class FileObj(BaseObject):
 

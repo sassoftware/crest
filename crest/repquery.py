@@ -124,8 +124,39 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     instanceId = l[0]
 
-    t = datamodel.SingleTrove(name = name, version = version, flavor = flavor,
-                              mkUrl = mkUrl)
+    cu.execute("""
+    SELECT infoType, data FROM TroveInfo WHERE instanceId = ? AND
+        infoType IN (%s)
+    """ % ",".join(str(x) for x in (trove._TROVEINFO_TAG_SOURCENAME,
+                                    trove._TROVEINFO_TAG_CLONEDFROM,
+                                    trove._TROVEINFO_TAG_CLONEDFROMLIST,
+                                    trove._TROVEINFO_TAG_BUILDTIME,
+                                   )), instanceId)
+
+    troveInfo = dict(
+            (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
+
+    kwargs = { 'name' : name, 'version' : version, 'flavor' : flavor,
+               'buildtime' : int(troveInfo[trove._TROVEINFO_TAG_BUILDTIME]()) }
+
+    if trove._TROVEINFO_TAG_SOURCENAME in troveInfo:
+        kwargs['source'] = datamodel.BaseTroveInfo(
+            name = troveInfo[trove._TROVEINFO_TAG_SOURCENAME](),
+            version = str(versions.VersionFromString(version).
+                                        getSourceVersion()),
+            flavor = '', mkUrl = mkUrl)
+
+    t = datamodel.SingleTrove(mkUrl = mkUrl, **kwargs)
+
+    if trove._TROVEINFO_TAG_CLONEDFROMLIST in troveInfo:
+        clonedFromList = troveInfo[trove._TROVEINFO_TAG_CLONEDFROMLIST]
+    elif trove._TROVEINFO_TAG_CLONEDFROM in troveInfo:
+        clonedFromList = [ troveInfo[trove._TROVEINFO_TAG_CLONEDFROM] ]
+    else:
+        clonedFromList = []
+
+    for ver in clonedFromList:
+        t.addClonedFrom(name, str(ver), flavor, mkUrl = mkUrl)
 
     cu.execute("""
         SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
