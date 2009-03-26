@@ -19,13 +19,21 @@ from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
 
 def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                  latest = True):
+    if label:
+        labelCheck = "= ?"
+        args = [ label ]
+    else:
+        # empty check, really
+        labelCheck = "IS NOT NULL"
+        args = []
+
     if latest:
         cu.execute("""
             SELECT item, version, flavor FROM
                 (SELECT DISTINCT itemId, versionId, flavorId FROM Labels
                     JOIN LabelMap USING (labelId)
                     JOIN LatestCache USING (itemId, branchId)
-                    WHERE label=? AND
+                    WHERE label %s AND
                           LatestCache.latestType = 1 AND
                           LatestCache.userGroupId in (%s))
                 AS idTable JOIN
@@ -33,7 +41,7 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                 Versions ON (idTable.versionId = Versions.versionId) JOIN
                 Flavors ON (idTable.flavorId = Flavors.flavorId)
                 ORDER BY item, version, flavor
-        """ % ",".join( str(x) for x in roleIds), label)
+        """ % (labelCheck, ",".join( str(x) for x in roleIds)), *args)
     else:
         cu.execute("""
             SELECT item, version, flavor FROM
@@ -44,14 +52,14 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                     JOIN Nodes USING (itemId, branchid)
                     JOIN Instances USING (itemid, versionid)
                     JOIN usergroupinstancescache AS ugi USING (instanceid)
-                    WHERE label=? AND
+                    WHERE label %s AND
                           ugi.userGroupId in (%s)) 
                 AS idTable JOIN
                 Items USING (itemId) JOIN
                 Versions ON (idTable.versionId = Versions.versionId) JOIN
                 Flavors ON (idTable.flavorId = Flavors.flavorId)
                 ORDER BY item, version, flavor
-        """ % ",".join( str(x) for x in roleIds), label)
+        """ % (labelCheck, ",".join( str(x) for x in roleIds)), *args)
 
     filters = []
     if 'group' in filterSet:
