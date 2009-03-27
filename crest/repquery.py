@@ -18,7 +18,7 @@ from conary.deps import deps
 from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
 
 def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
-                 latest = True):
+                 latest = True, first = 0, count = None):
     if label:
         labelCheck = "= ?"
         args = [ label ]
@@ -81,8 +81,12 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
     if filters:
         filters.append(None)
 
-    troveList = datamodel.TroveIdentList()
-    for (name, version, flavor) in cu:
+    l = list(cu)
+    if count is None:
+        count = len(l) - first
+    troveList = datamodel.TroveIdentList(total = len(l), first = first)
+
+    for (name, version, flavor) in l[first:first + count]:
         if filters:
             for f in filters:
                 if f and f(name): break

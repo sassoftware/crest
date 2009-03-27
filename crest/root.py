@@ -47,9 +47,14 @@ class SearchTroves(RestController):
 
         types = set(types)
 
+        first = int(request.GET.get('first', 0))
+        count = request.GET.get('count', None)
+        if count is not None: count = int(count)
+
         troves = repquery.searchTroves(cu, roleIds, label = label,
                                        filterSet = types, latest = latest,
-                                       mkUrl = self.urlF(request))
+                                       mkUrl = self.urlF(request),
+                                       first = first, count = count)
 
         return Response(xobj.toxml(troves, None))
 

@@ -50,7 +50,8 @@ class TroveIdent(BaseTroveInfo):
 
 class TroveIdentList(BaseObject):
 
-    _xobj = xobj.XObjMetadata(tag = 'trovelist')
+    _xobj = xobj.XObjMetadata(tag = 'trovelist',
+                              attributes = { 'total' : int, 'first' : int } )
     troveList = [ TroveIdent ]
 
     def append(self, name = None, version = None, flavor = None, mkUrl = None):
