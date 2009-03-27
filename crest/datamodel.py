@@ -12,6 +12,8 @@
 # full details.
 #
 
+import urllib
+
 from xobj import xobj
 from conary import versions
 
@@ -41,7 +43,7 @@ class BaseTroveInfo(BaseObject):
             ver = versions.VersionFromString(version)
             host = ver.trailingLabel().getHost()
             self.id = mkUrl('trove', "%s=%s[%s]" % (self.name, self.version,
-                                                    self.flavor),
+                                                    urllib.quote(self.flavor)),
                             host = host)
 
 class TroveIdent(BaseTroveInfo):
