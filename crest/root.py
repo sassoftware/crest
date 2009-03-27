@@ -38,6 +38,7 @@ class SearchTroves(RestController):
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         label = request.GET.get('label', None)
+        name = request.GET.get('name', None)
         types = request.GET.get('type', [])
         latest = request.GET.get('latest', 1)
         if type(types) != list:
@@ -54,7 +55,8 @@ class SearchTroves(RestController):
         troves = repquery.searchTroves(cu, roleIds, label = label,
                                        filterSet = types, latest = latest,
                                        mkUrl = self.urlF(request),
-                                       first = first, count = count)
+                                       first = first, count = count,
+                                       name = name)
 
         return Response(xobj.toxml(troves, None))
 

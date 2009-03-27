@@ -12,20 +12,41 @@
 # full details.
 #
 
+import re
+
 import datamodel
 from conary import files, trove, versions
 from conary.deps import deps
 from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
 
 def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
-                 latest = True, first = 0, count = None):
+                 latest = True, first = 0, count = None, name = None):
+    d = { 'labelCheck' : '', 'nameCheck' : '' }
+    args = []
+    regex = None
     if label:
-        labelCheck = "= ?"
-        args = [ label ]
-    else:
-        # empty check, really
-        labelCheck = "IS NOT NULL"
-        args = []
+        d['labelCheck'] = "label = ? AND"
+        args.append(label)
+
+    if name:
+        if set('?.*[]\\()+') & set(name):
+            # if only .* appears, replace them with '%' and use LIKE. this
+            # code currently fails with \.* in the regex, but neither .
+            # nor \* are valid trove names anyway
+            likeName = name
+            while '.*' in likeName:
+                likeName = likeName.replace('.*', '%')
+
+            if set('?.*[]\\()+') & set(name):
+                regex = re.compile(name)
+            else:
+                d['nameCheck'] = "WHERE item LIKE ?"
+                args.append(likeName)
+        else:
+            d['nameCheck' ] = "WHERE item = ?"
+            args.append(name)
+
+    d['roleIds'] = ",".join( str(x) for x in roleIds)
 
     if latest:
         cu.execute("""
@@ -33,15 +54,16 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                 (SELECT DISTINCT itemId, versionId, flavorId FROM Labels
                     JOIN LabelMap USING (labelId)
                     JOIN LatestCache USING (itemId, branchId)
-                    WHERE label %s AND
+                    WHERE %(labelCheck)s
                           LatestCache.latestType = 1 AND
-                          LatestCache.userGroupId in (%s))
+                          LatestCache.userGroupId in (%(roleIds)s))
                 AS idTable JOIN
                 Items USING (itemId) JOIN
                 Versions ON (idTable.versionId = Versions.versionId) JOIN
                 Flavors ON (idTable.flavorId = Flavors.flavorId)
+                %(nameCheck)s
                 ORDER BY item, version, flavor
-        """ % (labelCheck, ",".join( str(x) for x in roleIds)), *args)
+        """ % d, *args)
     else:
         cu.execute("""
             SELECT item, version, flavor FROM
@@ -52,14 +74,15 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                     JOIN Nodes USING (itemId, branchid)
                     JOIN Instances USING (itemid, versionid)
                     JOIN usergroupinstancescache AS ugi USING (instanceid)
-                    WHERE label %s AND
-                          ugi.userGroupId in (%s)) 
+                    WHERE %(labelCheck)s
+                          ugi.userGroupId in (%(roleIds)s))
                 AS idTable JOIN
                 Items USING (itemId) JOIN
                 Versions ON (idTable.versionId = Versions.versionId) JOIN
                 Flavors ON (idTable.flavorId = Flavors.flavorId)
+                %(nameCheck)s
                 ORDER BY item, version, flavor
-        """ % (labelCheck, ",".join( str(x) for x in roleIds)), *args)
+        """ % d, *args)
 
     filters = []
     if 'group' in filterSet:
@@ -82,6 +105,11 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
         filters.append(None)
 
     l = list(cu)
+
+    if regex:
+        fullL = l
+        l = [ x for x in l if regex.match(x[0]) ]
+
     if count is None:
         count = len(l) - first
     troveList = datamodel.TroveIdentList(total = len(l), first = first)
