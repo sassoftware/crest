@@ -171,6 +171,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                                     trove._TROVEINFO_TAG_CLONEDFROM,
                                     trove._TROVEINFO_TAG_CLONEDFROMLIST,
                                     trove._TROVEINFO_TAG_BUILDTIME,
+                                    trove._TROVEINFO_TAG_SIZE,
                                    )), instanceId)
 
     troveInfo = dict(
@@ -185,6 +186,9 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             version = str(versions.VersionFromString(version).
                                         getSourceVersion()),
             flavor = '', mkUrl = mkUrl)
+
+    if trove._TROVEINFO_TAG_SIZE in troveInfo:
+        kwargs['size'] = troveInfo[trove._TROVEINFO_TAG_SIZE]()
 
     t = datamodel.SingleTrove(mkUrl = mkUrl, **kwargs)
 

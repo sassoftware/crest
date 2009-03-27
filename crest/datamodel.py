@@ -98,8 +98,9 @@ class SingleTrove(TroveIdent):
     file = [ FileInTrove ]
     trove = [ ReferencedTrove ]
     source = BaseTroveInfo
-    buildtime = int
+    buildtime = long
     clonedfrom = [ BaseTroveInfo ]
+    size = long
 
     def addFile(self, f):
         self.file.append(f)
@@ -118,7 +119,7 @@ class FileObj(BaseObject):
 
     owner = str
     group = str
-    mtime = int
+    mtime = long
     perms = int
 
     def __init__(self, mkUrl = None, fileId = None, **kwargs):
