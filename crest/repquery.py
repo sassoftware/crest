@@ -128,7 +128,7 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
 
     return troveList
 
-def listLabels(cu, roleIds):
+def listLabels(cu, roleIds, mkUrl = None):
     cu.execute("""
         SELECT branch FROM
             (SELECT DISTINCT branchId FROM LatestCache
@@ -139,7 +139,7 @@ def listLabels(cu, roleIds):
     labels = set( str(versions.VersionFromString(x[0]).label()) for x in cu )
 
     l = datamodel.LabelList()
-    [ l.append(x) for x in sorted(labels) ]
+    [ l.append(x, mkUrl = mkUrl) for x in sorted(labels) ]
 
     return l
 

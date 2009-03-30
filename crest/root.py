@@ -75,7 +75,7 @@ class SearchTroves(RestController):
 class ListLabels(RestController):
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
-        l = repquery.listLabels(cu, roleIds)
+        l = repquery.listLabels(cu, roleIds, mkUrl = self.urlF(request))
         return XMLResponse(xobj.toxml(l, None))
 
 class GetTrove(RestController):

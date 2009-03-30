@@ -54,20 +54,30 @@ class TroveIdent(BaseTroveInfo):
 class TroveIdentList(BaseObject):
 
     _xobj = xobj.XObjMetadata(tag = 'trovelist',
-                              attributes = { 'total' : int, 'first' : int } )
+                              attributes = { 'total' : int, 'first' : int,
+                                             'id' : str, 'href' : str } )
     troveList = [ TroveIdent ]
 
     def append(self, name = None, version = None, flavor = None, mkUrl = None):
         self.troveList.append(TroveIdent(name = name, version = version,
                                          flavor = flavor, mkUrl = mkUrl))
 
+class Label(BaseObject):
+
+    name = str
+    latest = TroveIdentList
+
 class LabelList(BaseObject):
 
     _xobj = xobj.XObjMetadata(tag = 'labellist')
     label = [ str ]
 
-    def append(self, labelStr):
-        self.label.append(labelStr)
+    def append(self, labelStr, mkUrl = None):
+        l = Label(name = labelStr)
+        if mkUrl:
+            l.latest = TroveIdentList(href =
+                            mkUrl('search',  [ ('label', labelStr) ]))
+        self.label.append(l)
 
 class FileId(xobj.XObj):
 
