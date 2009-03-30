@@ -194,8 +194,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     if trove._TROVEINFO_TAG_CLONEDFROMLIST in troveInfo:
         clonedFromList = troveInfo[trove._TROVEINFO_TAG_CLONEDFROMLIST]
-    elif trove._TROVEINFO_TAG_CLONEDFROM in troveInfo:
-        clonedFromList = [ troveInfo[trove._TROVEINFO_TAG_CLONEDFROM] ]
+    elif (trove._TROVEINFO_TAG_CLONEDFROM in troveInfo):
+        clonedFromList = [ troveInfo[trove._TROVEINFO_TAG_CLONEDFROM]() ]
     else:
         clonedFromList = []
 
