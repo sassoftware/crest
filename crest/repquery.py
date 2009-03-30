@@ -123,8 +123,9 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
 
         flavor = str(deps.ThawFlavor(flavor))
 
-        troveList.append(name = name, version = version, flavor = flavor,
-                         mkUrl = mkUrl)
+        troveList.append(name = name,
+                         version = versions.VersionFromString(version),
+                         flavor = flavor, mkUrl = mkUrl)
 
     return troveList
 
@@ -177,14 +178,14 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     troveInfo = dict(
             (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
 
-    kwargs = { 'name' : name, 'version' : version, 'flavor' : flavor,
+    kwargs = { 'name' : name, 'version' : versions.VersionFromString(version),
+               'flavor' : flavor,
                'buildtime' : int(troveInfo[trove._TROVEINFO_TAG_BUILDTIME]()) }
 
     if trove._TROVEINFO_TAG_SOURCENAME in troveInfo:
         kwargs['source'] = datamodel.BaseTroveInfo(
             name = troveInfo[trove._TROVEINFO_TAG_SOURCENAME](),
-            version = str(versions.VersionFromString(version).
-                                        getSourceVersion()),
+            version = versions.VersionFromString(version).getSourceVersion(),
             flavor = '', mkUrl = mkUrl)
 
     if trove._TROVEINFO_TAG_SIZE in troveInfo:
@@ -200,7 +201,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         clonedFromList = []
 
     for ver in clonedFromList:
-        t.addClonedFrom(name, str(ver), flavor, mkUrl = mkUrl)
+        t.addClonedFrom(name, ver, flavor, mkUrl = mkUrl)
 
     cu.execute("""
         SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
@@ -232,7 +233,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     for (subName, subVersion, subFlavor) in cu:
         subFlavor = str(deps.ThawFlavor(subFlavor))
-        t.addReferencedTrove(subName, subVersion, subFlavor, mkUrl = mkUrl)
+        t.addReferencedTrove(subName, versions.VersionFromString(subVersion),
+                             subFlavor, mkUrl = mkUrl)
 
     return t
 

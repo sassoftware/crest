@@ -31,19 +31,30 @@ class BaseObject(object):
             else:
                 raise TypeError, 'unknown constructor parameter %s' % key
 
+class Version(BaseObject):
+
+    full = str
+    label = str
+    revision = str
+
+    def __init__(self, v):
+        self.full = str(v)
+        self.label = str(v.trailingLabel())
+        self.revision = str(v.trailingRevision())
+
 class BaseTroveInfo(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
     name = str
-    version = str
+    version = Version
     flavor = str
 
     def __init__(self, version = None, mkUrl = None, **kwargs):
-        BaseObject.__init__(self, version = version, **kwargs)
+        BaseObject.__init__(self, **kwargs)
+        self.version = Version(version)
         if mkUrl:
-            ver = versions.VersionFromString(version)
-            host = ver.trailingLabel().getHost()
-            self.id = mkUrl('trove', "%s=%s[%s]" % (self.name, self.version,
+            host = version.trailingLabel().getHost()
+            self.id = mkUrl('trove', "%s=%s[%s]" % (self.name, version,
                                                     self.flavor),
                             host = host)
 
@@ -121,7 +132,7 @@ class SingleTrove(TroveIdent):
                                            flavor = flavor, mkUrl = mkUrl))
 
     def addClonedFrom(self, name, version, flavor, mkUrl = None):
-        self.clonedfrom.append(BaseTroveInfo(name = name, version = version,
+        self.clonedfrom.append(BaseTroveInfo(name = name,version = version,
                                              flavor = flavor, mkUrl = mkUrl))
 
 class FileObj(BaseObject):
