@@ -10,7 +10,8 @@
 # without any warranty; without even the implied warranty of merchantability
 # or fitness for a particular purpose. See the Common Public License for
 # full details.
-#
+
+import os
 
 from restlib import controller
 from restlib import response
@@ -18,10 +19,21 @@ from xobj import xobj
 
 import repquery
 
-class Response(response.Response):
+class XMLResponse(response.Response):
     def __init__(self, content, contentType='text/xml; charset=utf-8'):
         response.Response.__init__(self, content, contentType)
         self.headers['cache-control'] = 'private, must-revalidate, max-age=0'
+
+class FileResponse(response.FileResponse):
+
+    def __init__(self, path, remotePath = None, gzipped = False):
+        response.FileResponse.__init__(self, path = path)
+        self.headers['cache-control'] = 'private, must-revalidate'
+        self.headers['Content-Disposition'] = 'attachment'
+        if remotePath:
+            self.headers['Content-Disposition'] += '; filename=%s' % remotePath
+        #if gzipped:
+            #self.headers['content-encoding'] = 'gzip'
 
 class RestController(controller.RestController):
 
@@ -58,13 +70,13 @@ class SearchTroves(RestController):
                                        first = first, count = count,
                                        name = name)
 
-        return Response(xobj.toxml(troves, None))
+        return XMLResponse(xobj.toxml(troves, None))
 
 class ListLabels(RestController):
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         l = repquery.listLabels(cu, roleIds)
-        return Response(xobj.toxml(l, None))
+        return XMLResponse(xobj.toxml(l, None))
 
 class GetTrove(RestController):
 
@@ -83,7 +95,7 @@ class GetTrove(RestController):
         if x is None:
             raise NotImplementedError
 
-        return Response(xobj.toxml(x, None))
+        return XMLResponse(xobj.toxml(x, None))
 
 class GetFile(RestController):
 
@@ -97,7 +109,7 @@ class GetFile(RestController):
         if x is None:
             raise NotImplementedError
 
-        return Response(xobj.toxml(x, None))
+        return XMLResponse(xobj.toxml(x, None))
 
     def content(self, request, cu, roleIds = None, fileId = None,
                 repos = None, **kwargs):
@@ -106,7 +118,7 @@ class GetFile(RestController):
             raise NotImplementedError
 
         path = repos.repos.contentsStore.hashToPath(sha1)
-        return Response(open(path).read())
+        return FileResponse(path, gzipped = True, remotePath = '%s.gz' % sha1)
 
 class Controller(RestController):
 
