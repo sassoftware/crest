@@ -50,10 +50,13 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
 
     if latest:
         cu.execute("""
-            SELECT item, version, flavor FROM
-                (SELECT DISTINCT itemId, versionId, flavorId FROM Labels
+            SELECT item, version, flavor, ts FROM
+                (SELECT DISTINCT Nodes.itemId AS itemId,
+                                 Nodes.versionId AS versionId, flavorId,
+                                 Nodes.timeStamps AS ts FROM Labels
                     JOIN LabelMap USING (labelId)
                     JOIN LatestCache USING (itemId, branchId)
+                    JOIN Nodes USING (itemId, versionId)
                     WHERE %(labelCheck)s
                           LatestCache.latestType = 1 AND
                           LatestCache.userGroupId in (%(roleIds)s))
@@ -66,10 +69,12 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
         """ % d, *args)
     else:
         cu.execute("""
-            SELECT item, version, flavor FROM
+            SELECT item, version, flavor, ts FROM
                 (SELECT DISTINCT Instances.itemId AS itemId,
                                  Instances.versionId AS versionId,
-                                 Instances.flavorId AS flavorId FROM Labels
+                                 Instances.flavorId AS flavorId,
+                                 Nodes.timeStamps AS ts
+                                 FROM Labels
                     JOIN LabelMap USING (labelId)
                     JOIN Nodes USING (itemId, branchid)
                     JOIN Instances USING (itemid, versionid)
@@ -114,7 +119,7 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
         count = len(l) - first
     troveList = datamodel.TroveIdentList(total = len(l), first = first)
 
-    for (name, version, flavor) in l[first:first + count]:
+    for (name, version, flavor, ts) in l[first:first + count]:
         if filters:
             for f in filters:
                 if f and f(name): break
@@ -122,10 +127,12 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                 continue
 
         flavor = str(deps.ThawFlavor(flavor))
+        frzVer = versions.strToFrozen(version,
+                                      [ x for x in ts.split(":") ])
+        ver = versions.ThawVersion(frzVer)
 
-        troveList.append(name = name,
-                         version = versions.VersionFromString(version),
-                         flavor = flavor, mkUrl = mkUrl)
+        troveList.append(name = name, version = ver, flavor = flavor,
+                         mkUrl = mkUrl)
 
     return troveList
 

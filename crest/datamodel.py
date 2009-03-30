@@ -36,11 +36,15 @@ class Version(BaseObject):
     full = str
     label = str
     revision = str
+    ordering = float
 
     def __init__(self, v):
         self.full = str(v)
         self.label = str(v.trailingLabel())
         self.revision = str(v.trailingRevision())
+        # we don't use getTimestamp here because 0 is okay...
+        ts = v.trailingRevision().timeStamp
+        self.ordering = ts
 
 class BaseTroveInfo(BaseObject):
 
