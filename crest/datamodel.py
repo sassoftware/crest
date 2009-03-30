@@ -72,7 +72,7 @@ class FileId(xobj.XObj):
 
     _xobj = xobj.XObjMetadata(attributes = { 'href' : str })
 
-class FileInTrove(BaseObject):
+class FileReference(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
 
@@ -95,7 +95,7 @@ class ReferencedTrove(BaseTroveInfo):
 class SingleTrove(TroveIdent):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
-    file = [ FileInTrove ]
+    fileref = [ FileReference ]
     trove = [ ReferencedTrove ]
     source = BaseTroveInfo
     buildtime = long
@@ -103,7 +103,7 @@ class SingleTrove(TroveIdent):
     size = long
 
     def addFile(self, f):
-        self.file.append(f)
+        self.fileref.append(f)
 
     def addReferencedTrove(self, name, version, flavor, mkUrl = None):
         self.trove.append(ReferencedTrove(name = name, version = version,

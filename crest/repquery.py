@@ -213,7 +213,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     """, instanceId)
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
-        fileObj = datamodel.FileInTrove(
+        fileObj = datamodel.FileReference(
                         path = dirName + '/' + baseName,
                         version = fileVersion,
                         pathId = md5ToString(cu.frombinary(pathId)),
