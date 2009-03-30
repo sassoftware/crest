@@ -33,6 +33,7 @@ class BaseObject(object):
 
 class BaseTroveInfo(BaseObject):
 
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
     name = str
     version = str
     flavor = str
@@ -43,7 +44,7 @@ class BaseTroveInfo(BaseObject):
             ver = versions.VersionFromString(version)
             host = ver.trailingLabel().getHost()
             self.id = mkUrl('trove', "%s=%s[%s]" % (self.name, self.version,
-                                                    urllib.quote(self.flavor)),
+                                                    self.flavor),
                             host = host)
 
 class TroveIdent(BaseTroveInfo):
