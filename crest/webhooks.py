@@ -16,8 +16,6 @@
 import restlib.auth
 from restlib.http import simplehttp
 from restlib.http import modpython as restmodpython
-from conary.repository.netrepos import netserver
-from conary.server import server
 import sys
 
 import root
