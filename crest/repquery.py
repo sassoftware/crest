@@ -18,6 +18,7 @@ import datamodel
 from conary import files, trove, versions
 from conary.deps import deps
 from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
+from conary.server import schema
 
 def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                  latest = True, first = 0, count = None, name = None):
@@ -235,8 +236,11 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             JOIN Items USING (itemId)
             JOIN Versions ON (Versions.versionId = Instances.versionId)
             JOIN Flavors ON (Flavors.flavorId = Instances.flavorId)
-            WHERE TroveTroves.instanceId = ? ORDER BY item, version, flavor
-    """, instanceId)
+            WHERE
+                TroveTroves.instanceId = ? AND
+                (TroveTroves.flags & %d) == 0
+            ORDER BY item, version, flavor
+    """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
     for (subName, subVersion, subFlavor) in cu:
         subFlavor = str(deps.ThawFlavor(subFlavor))
