@@ -37,14 +37,8 @@ class FileResponse(response.FileResponse):
 
 class RestController(controller.RestController):
 
-    def makeUrl(self, request, repos, *args, **kwargs):
-        if repos is not None and 'host' in kwargs:
-            if kwargs['host'] not in repos.serverNameList:
-                return 'http://%s/%s' % (kwargs['host'], '/'.join(args))
-        return self.url(request, *args)
-
     def urlF(self, request, repos = None):
-        return lambda *x, **kw: (self.makeUrl(request, repos, *x, **kw))
+        return lambda *x, **kw: (request.makeUrl(request, repos, *x, **kw))
 
 class GetTrove(RestController):
 
