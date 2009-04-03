@@ -137,7 +137,7 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
 
     return troveList
 
-def listLabels(cu, roleIds, mkUrl = None):
+def getRepository(cu, roleIds, mkUrl = None):
     cu.execute("""
         SELECT branch FROM
             (SELECT DISTINCT branchId FROM LatestCache
@@ -147,10 +147,12 @@ def listLabels(cu, roleIds, mkUrl = None):
 
     labels = set( str(versions.VersionFromString(x[0]).label()) for x in cu )
 
-    l = datamodel.LabelList()
-    [ l.append(x, mkUrl = mkUrl) for x in sorted(labels) ]
+    trovelist = datamodel.TroveIdentList(id = mkUrl('trove'))
+    repository = datamodel.Repository(trovelist = trovelist)
 
-    return l
+    [ repository.appendLabel(x, mkUrl = mkUrl) for x in sorted(labels) ]
+
+    return repository
 
 def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
              thisHost = None):

@@ -1,10 +1,11 @@
 This API appears as /api/ under the conary repository.
 
-/labels
+/
     Returns a list of all of the labels which contain troves the user
-    has access to.
+    has access to. As well as a <trovelist> with an id for seeing all
+    of the troves the user may access.
 
-/search
+/trove
     Returns name, version, and flavor for all of the troves the user
     has access to. Results can be limited by using one or more parameters.
     The parameters are logically ANDed together.

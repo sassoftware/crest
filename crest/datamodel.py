@@ -82,18 +82,6 @@ class Label(BaseObject):
     name = str
     latest = TroveIdentList
 
-class LabelList(BaseObject):
-
-    _xobj = xobj.XObjMetadata(tag = 'labellist')
-    label = [ str ]
-
-    def append(self, labelStr, mkUrl = None):
-        l = Label(name = labelStr)
-        if mkUrl:
-            l.latest = TroveIdentList(href =
-                            mkUrl('search',  [ ('label', labelStr) ]))
-        self.label.append(l)
-
 class FileId(xobj.XObj):
 
     _xobj = xobj.XObjMetadata(attributes = { 'href' : str })
@@ -197,3 +185,17 @@ class BlockDeviceFile(_DeviceFile):
 
 class CharacterDeviceFile(_DeviceFile):
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'chardevice')
+
+class Repository(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'repository')
+    label = [ str ]
+    trovelist = TroveIdentList
+
+    def appendLabel(self, labelStr, mkUrl = None):
+        l = Label(name = labelStr)
+        if mkUrl:
+            l.latest = TroveIdentList(href =
+                            mkUrl('trove',  [ ('label', labelStr) ]))
+        self.label.append(l)
+

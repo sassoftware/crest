@@ -46,7 +46,7 @@ class RestController(controller.RestController):
     def urlF(self, request, repos = None):
         return lambda *x, **kw: (self.makeUrl(request, repos, *x, **kw))
 
-class SearchTroves(RestController):
+class GetTrove(RestController):
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         label = request.GET.get('label', None)
@@ -71,14 +71,6 @@ class SearchTroves(RestController):
                                        name = name)
 
         return XMLResponse(xobj.toxml(troves, None))
-
-class ListLabels(RestController):
-
-    def index(self, request, cu = None, roleIds = None, *args, **kwargs):
-        l = repquery.listLabels(cu, roleIds, mkUrl = self.urlF(request))
-        return XMLResponse(xobj.toxml(l, None))
-
-class GetTrove(RestController):
 
     modelName = "troveString"
     modelRegex = '.*\[.*\]'
@@ -122,7 +114,10 @@ class GetFile(RestController):
 
 class Controller(RestController):
 
-    urls = { 'search' : SearchTroves,
-             'labels' : ListLabels,
-             'trove'  : GetTrove,
+    urls = { 'trove'  : GetTrove,
              'file'   : GetFile }
+
+    def index(self, request, cu = None, roleIds = None, *args, **kwargs):
+        l = repquery.getRepository(cu, roleIds, mkUrl = self.urlF(request))
+        return XMLResponse(xobj.toxml(l, None))
+
