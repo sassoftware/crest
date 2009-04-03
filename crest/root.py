@@ -37,8 +37,7 @@ class FileResponse(response.FileResponse):
 
 class RestController(controller.RestController):
 
-    def urlF(self, request, repos = None):
-        return lambda *x, **kw: (request.makeUrl(request, repos, *x, **kw))
+    pass
 
 class GetTrove(RestController):
 
@@ -60,7 +59,7 @@ class GetTrove(RestController):
 
         troves = repquery.searchTroves(cu, roleIds, label = label,
                                        filterSet = types, latest = latest,
-                                       mkUrl = self.urlF(request),
+                                       mkUrl = request.makeUrl,
                                        first = first, count = count,
                                        name = name)
 
@@ -76,8 +75,7 @@ class GetTrove(RestController):
         flavor = flavor[:-1]
 
         x = repquery.getTrove(cu, roleIds, name, version, flavor,
-                              mkUrl = self.urlF(request, repos = repos),
-                              thisHost = request.host)
+                              mkUrl = request.makeUrl, thisHost = request.host)
         if x is None:
             raise NotImplementedError
 
@@ -90,8 +88,7 @@ class GetFile(RestController):
              'content' : { 'GET' : 'content' }}
 
     def info(self, request, cu, roleIds = None, fileId = None, **kwargs):
-        x = repquery.getFileInfo(cu, roleIds, fileId,
-                                 mkUrl = self.urlF(request))
+        x = repquery.getFileInfo(cu, roleIds, fileId, mkUrl = request.makeUrl)
         if x is None:
             raise NotImplementedError
 
@@ -112,6 +109,6 @@ class Controller(RestController):
              'file'   : GetFile }
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
-        l = repquery.getRepository(cu, roleIds, mkUrl = self.urlF(request))
+        l = repquery.getRepository(cu, roleIds, mkUrl = request.makeUrl)
         return XMLResponse(xobj.toxml(l, None))
 

@@ -36,11 +36,12 @@ class ReposCallback:
             return response.Response(status=403)
         request.repos = self.repos
         request.roleIds = kwargs['roleIds']
-        request.makeUrl = self.makeUrl
+        # unnatural act
+        request.makeUrl = lambda *x, **kw: (self.makeUrl(request, *x, **kw))
 
-    def makeUrl(self, request, repos, *args, **kwargs):
-        if repos is not None and 'host' in kwargs:
-            if kwargs['host'] not in repos.serverNameList:
+    def makeUrl(self, request, *args, **kwargs):
+        if request.repos is not None and 'host' in kwargs:
+            if kwargs['host'] not in request.repos.serverNameList:
                 return 'http://%s/%s' % (kwargs['host'], '/'.join(args))
         return request.url(*args)
 
