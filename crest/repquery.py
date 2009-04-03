@@ -187,8 +187,10 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
 
     kwargs = { 'name' : name, 'version' : versions.VersionFromString(version),
-               'flavor' : flavor,
-               'buildtime' : int(troveInfo[trove._TROVEINFO_TAG_BUILDTIME]()) }
+               'flavor' : flavor }
+
+    if trove._TROVEINFO_TAG_BUILDTIME in troveInfo:
+        kwargs['buildtime'] = int(troveInfo[trove._TROVEINFO_TAG_BUILDTIME]())
 
     if trove._TROVEINFO_TAG_SOURCENAME in troveInfo:
         kwargs['source'] = datamodel.BaseTroveInfo(
