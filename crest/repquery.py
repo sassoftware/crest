@@ -238,7 +238,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             JOIN Flavors ON (Flavors.flavorId = Instances.flavorId)
             WHERE
                 TroveTroves.instanceId = ? AND
-                (TroveTroves.flags & %d) == 0
+                (TroveTroves.flags & %d) = 0
             ORDER BY item, version, flavor
     """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
