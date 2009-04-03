@@ -21,7 +21,7 @@ from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
 from conary.server import schema
 
 def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
-                 latest = True, first = 0, count = None, name = None):
+                 latest = True, start = 0, limit = None, name = None):
     d = { 'labelCheck' : '', 'nameCheck' : '' }
     args = []
     regex = None
@@ -116,11 +116,11 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
         fullL = l
         l = [ x for x in l if regex.match(x[0]) ]
 
-    if count is None:
-        count = len(l) - first
-    troveList = datamodel.TroveIdentList(total = len(l), first = first)
+    if limit is None:
+        limit = len(l) - start
+    troveList = datamodel.TroveIdentList(total = len(l), start = start)
 
-    for (name, version, flavor, ts) in l[first:first + count]:
+    for (name, version, flavor, ts) in l[start:start + limit]:
         if filters:
             for f in filters:
                 if f and f(name): break

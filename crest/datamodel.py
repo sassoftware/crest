@@ -69,7 +69,7 @@ class TroveIdent(BaseTroveInfo):
 class TroveIdentList(BaseObject):
 
     _xobj = xobj.XObjMetadata(tag = 'trovelist',
-                              attributes = { 'total' : int, 'first' : int,
+                              attributes = { 'total' : int, 'start' : int,
                                              'id' : str, 'href' : str } )
     troveList = [ TroveIdent ]
 
