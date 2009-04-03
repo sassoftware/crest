@@ -14,8 +14,10 @@
 #
 
 import restlib.auth
+from restlib import response
 from restlib.http import simplehttp
 from restlib.http import modpython as restmodpython
+from conary.web import webauth
 import sys
 
 import root
@@ -27,9 +29,13 @@ class ReposCallback:
 
     def processMethod(self, request, method, args, kwargs):
         cu = self.repos.db.cursor()
+
+        entitlementList = webauth.parseEntitlement(
+                            request.headers.get('X-Conary-Entitlement', ''))
+        authToken = ( request.auth[0], request.auth[1], entitlementList )
+
         kwargs['repos'] = self.repos
-        kwargs['roleIds'] = self.repos.auth.getAuthRoles(
-                                    cu, request.auth + (None, None))
+        kwargs['roleIds'] = self.repos.auth.getAuthRoles(cu, authToken)
         kwargs['cu'] = cu
 
         if not kwargs['roleIds']:
