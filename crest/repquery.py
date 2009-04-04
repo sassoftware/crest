@@ -113,20 +113,23 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
     l = list(cu)
 
     if regex:
-        fullL = l
         l = [ x for x in l if regex.match(x[0]) ]
 
-    if limit is None:
-        limit = len(l) - start
-    troveList = datamodel.TroveIdentList(total = len(l), start = start)
-
-    for (name, version, flavor, ts) in l[start:start + limit]:
+    filteredL = []
+    for item in l:
         if filters:
             for f in filters:
-                if f and f(name): break
+                if f and f(item[0]): break
             if f is None:
                 continue
 
+        filteredL.append(item)
+
+    if limit is None:
+        limit = len(filteredL) - start
+    troveList = datamodel.TroveIdentList(total = len(filteredL), start = start)
+
+    for (name, version, flavor, ts) in filteredL[start:start + limit]:
         flavor = str(deps.ThawFlavor(flavor))
         frzVer = versions.strToFrozen(version,
                                       [ x for x in ts.split(":") ])

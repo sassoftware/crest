@@ -54,8 +54,10 @@ class GetTrove(RestController):
         types = set(types)
 
         start = int(request.GET.get('start', 0))
-        limit = request.GET.get('limit', None)
-        if count is not None: count = int(count)
+        if 'limit' in request.GET:
+            limit = int(request.GET['limit'])
+        else:
+            limit = None
 
         troves = repquery.searchTroves(cu, roleIds, label = label,
                                        filterSet = types, latest = latest,
