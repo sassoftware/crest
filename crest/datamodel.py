@@ -105,6 +105,13 @@ class ReferencedTrove(BaseTroveInfo):
 
     pass
 
+class License(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
+
+    def __init__(self, val):
+        BaseObject.__init__(self, id = "http://%s" % val)
+
 class SingleTrove(TroveIdent):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
@@ -120,6 +127,10 @@ class SingleTrove(TroveIdent):
     copiedfrom = SimpleTroveIdentList
     copiedfrom = SimpleTroveIdentList
     derivedfrom = SimpleTroveIdentList
+    license = [ License ]
+    shortdesc = str
+    longdesc = str
+    crypto = str
 
     def addFile(self, f):
         self.fileref.append(f)
@@ -131,6 +142,12 @@ class SingleTrove(TroveIdent):
     def addClonedFrom(self, name, version, flavor, mkUrl = None):
         self.clonedfrom.append(BaseTroveInfo(name = name,version = version,
                                              flavor = flavor, mkUrl = mkUrl))
+
+    def __init__(self, licenses = None, **kwargs):
+        TroveIdent.__init__(self, **kwargs)
+        if licenses:
+            for license in licenses:
+                self.license.append(License(license))
 
 class Troves(BaseObject):
 

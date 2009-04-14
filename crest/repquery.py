@@ -133,7 +133,7 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
 
         if metadata:
             md = trove.Metadata(metadata)
-            shortdesc = md.get()['licenses']
+            shortdesc = md.get()['shortDesc']
 
         if clName:
             cl = datamodel.ChangeLog(name = clName, message = clMessage)
@@ -299,6 +299,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                           trove._TROVEINFO_TAG_CLONEDFROMLIST,
                           trove._TROVEINFO_TAG_BUILDTIME,
                           trove._TROVEINFO_TAG_SIZE,
+                          trove._TROVEINFO_TAG_METADATA,
                         ] + [ x[0] for x in tupleLists ]
                 ), instanceId)
 
@@ -319,6 +320,14 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     if trove._TROVEINFO_TAG_SIZE in troveInfo:
         kwargs['size'] = troveInfo[trove._TROVEINFO_TAG_SIZE]()
+
+    if trove._TROVEINFO_TAG_METADATA in troveInfo:
+        md = troveInfo[trove._TROVEINFO_TAG_METADATA].get()
+        kwargs['licenses'] = md['licenses']
+        kwargs['shortdesc'] = md['shortDesc']
+        kwargs['longdesc'] = md['longDesc']
+        if md['crypto']:
+            kwargs['crypto'] = " ".join(md['crypto'])
 
     for (tag, tagName) in tupleLists:
         if tag in troveInfo:
