@@ -256,6 +256,15 @@ def getRepository(cu, roleIds, mkUrl = None):
 
 def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
              thisHost = None):
+
+    def buildTupleList(tuples, mkUrl = mkUrl):
+        l = datamodel.SimpleTroveIdentList()
+        for troveInfo in tuples.iter():
+            l.append(name = troveInfo.name(), version = troveInfo.version(),
+                     flavor = troveInfo.flavor(), mkUrl = mkUrl)
+
+        return l
+
     cu.execute("""
         SELECT Instances.instanceId FROM Instances
             JOIN Items USING (itemId)
@@ -275,15 +284,23 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     instanceId = l[0]
 
+    tupleLists = [ ( trove._TROVEINFO_TAG_BUILDDEPS, 'builddeps' ),
+                   ( trove._TROVEINFO_TAG_POLICY_PROV, 'policyprovider' ),
+                   ( trove._TROVEINFO_TAG_LOADEDTROVES, 'loadedtroves' ),
+                   ( trove._TROVEINFO_TAG_COPIED_FROM, 'copiedfrom' ),
+                   ( trove._TROVEINFO_TAG_DERIVEDFROM, 'derivedfrom' ) ]
+
     cu.execute("""
     SELECT infoType, data FROM TroveInfo WHERE instanceId = ? AND
         infoType IN (%s)
-    """ % ",".join(str(x) for x in (trove._TROVEINFO_TAG_SOURCENAME,
-                                    trove._TROVEINFO_TAG_CLONEDFROM,
-                                    trove._TROVEINFO_TAG_CLONEDFROMLIST,
-                                    trove._TROVEINFO_TAG_BUILDTIME,
-                                    trove._TROVEINFO_TAG_SIZE,
-                                   )), instanceId)
+                """ % ",".join(str(x) for x in
+                        [ trove._TROVEINFO_TAG_SOURCENAME,
+                          trove._TROVEINFO_TAG_CLONEDFROM,
+                          trove._TROVEINFO_TAG_CLONEDFROMLIST,
+                          trove._TROVEINFO_TAG_BUILDTIME,
+                          trove._TROVEINFO_TAG_SIZE,
+                        ] + [ x[0] for x in tupleLists ]
+                ), instanceId)
 
     troveInfo = dict(
             (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
@@ -302,6 +319,10 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     if trove._TROVEINFO_TAG_SIZE in troveInfo:
         kwargs['size'] = troveInfo[trove._TROVEINFO_TAG_SIZE]()
+
+    for (tag, tagName) in tupleLists:
+        if tag in troveInfo:
+            kwargs[tagName] = buildTupleList(troveInfo[tag ], mkUrl = mkUrl)
 
     t = datamodel.SingleTrove(mkUrl = mkUrl, **kwargs)
 

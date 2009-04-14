@@ -77,6 +77,14 @@ class TroveIdent(BaseTroveInfo):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
 
+class SimpleTroveIdentList(BaseObject):
+
+    troveList = [ TroveIdent ]
+
+    def append(self, name = None, version = None, flavor = None, mkUrl = None):
+        self.troveList.append(TroveIdent(name = name, version = version,
+                                         flavor = flavor, mkUrl = mkUrl))
+
 class FileReference(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
@@ -106,6 +114,12 @@ class SingleTrove(TroveIdent):
     buildtime = long
     clonedfrom = [ BaseTroveInfo ]
     size = long
+    builddeps = SimpleTroveIdentList
+    policyprovider = SimpleTroveIdentList
+    loadedtroves = SimpleTroveIdentList
+    copiedfrom = SimpleTroveIdentList
+    copiedfrom = SimpleTroveIdentList
+    derivedfrom = SimpleTroveIdentList
 
     def addFile(self, f):
         self.fileref.append(f)
