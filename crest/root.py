@@ -41,7 +41,8 @@ class RestController(controller.RestController):
 
 class GetNode(RestController):
 
-    def index(self, request, cu = None, roleIds = None, *args, **kwargs):
+    def index(self, request, cu = None, roleIds = None, repos = None, *args,
+              **kwargs):
         label = request.GET.get('label', None)
 
         types = request.GET.get('type', [])
@@ -51,7 +52,7 @@ class GetNode(RestController):
 
         troves = repquery.searchNodes(cu, roleIds, label = label,
                                       mkUrl = request.makeUrl,
-                                      filterSet = types)
+                                      filterSet = types, db = repos.db)
         return XMLResponse(xobj.toxml(troves, None))
 
 class GetTrove(RestController):

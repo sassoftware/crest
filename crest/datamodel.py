@@ -126,6 +126,11 @@ class Troves(BaseObject):
     def append(self, trv):
         self.trove.append(trv)
 
+class ChangeLog(BaseObject):
+
+    name = str
+    message = str
+
 class Node(BaseObject):
 
     _xobj = xobj.XObjMetadata()
@@ -133,6 +138,8 @@ class Node(BaseObject):
     troves = str
     version = VersionSummary
     flavor = str
+    changeLog = ChangeLog
+    shortdesc = str
 
     def __init__(self, version = None, mkUrl = None, **kwargs):
         BaseObject.__init__(self, **kwargs)
@@ -147,8 +154,10 @@ class BaseNodeList(BaseObject):
                                              'id' : str, 'href' : str })
     node = [ Node ]
 
-    def append(self, name = None, version = None, mkUrl = None):
-        self.node.append(Node(name = name, version = version, mkUrl = mkUrl))
+    def append(self, name = None, version = None, mkUrl = None,
+               changeLog = None, shortdesc = None):
+        self.node.append(Node(name = name, version = version, mkUrl = mkUrl,
+                              changeLog = changeLog, shortdesc = None))
 
 class NodeList(BaseNodeList):
     _xobj = xobj.XObjMetadata(tag = 'nodelist',

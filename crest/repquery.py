@@ -12,7 +12,7 @@
 # full details.
 #
 
-import re
+import itertools, re
 
 import datamodel
 from conary import files, trove, versions
@@ -55,29 +55,44 @@ def typeFilter(l, filterSet):
 
     return filteredL
 
-def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None):
+def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
+                db = None):
     args = []
     d = { 'labelCheck' : '' }
     d['roleIds'] = ",".join( str(x) for x in roleIds)
+    d['SOURCENAME'] = trove._TROVEINFO_TAG_SOURCENAME
+    d['METADATA'] = trove._TROVEINFO_TAG_METADATA
 
     if label:
         d['labelCheck'] = "label = ? AND"
         args.append(label)
 
     cu.execute("""
-        SELECT item, version, ts FROM
+        SELECT item, version, ts, SourceNameTroveInfo.data,
+               MetadataTroveInfo.data FROM
             (SELECT DISTINCT Nodes.itemId AS itemId,
                              Nodes.versionId AS versionId,
-                             Nodes.timeStamps AS ts FROM Labels
+                             Nodes.timeStamps AS ts,
+                             MIN(Instances.instanceId) AS instanceId
+                FROM Labels
                 JOIN LabelMap USING (labelId)
                 JOIN LatestCache USING (itemId, branchId)
                 JOIN Nodes USING (itemId, versionId)
+                JOIN Instances USING (itemId, versionId)
                 WHERE %(labelCheck)s
                       LatestCache.latestType = 1 AND
-                      LatestCache.userGroupId in (%(roleIds)s))
-            AS idTable JOIN
-            Items USING (itemId) JOIN
-            Versions ON (idTable.versionId = Versions.versionId)
+                      LatestCache.userGroupId in (%(roleIds)s)
+                GROUP BY
+                      Nodes.itemId, Nodes.versionId, Nodes.timeStamps)
+            AS idTable
+            JOIN Items USING (itemId)
+            JOIN Versions ON (idTable.versionId = Versions.versionId)
+            LEFT OUTER JOIN TroveInfo AS SourceNameTroveInfo ON
+                idTable.instanceId = SourceNameTroveInfo.instanceId AND
+                SourceNameTroveInfo.infoType = %(SOURCENAME)d
+            LEFT OUTER JOIN TroveInfo AS MetadataTroveInfo ON
+                idTable.instanceId = MetadataTroveInfo.instanceId AND
+                MetadataTroveInfo.infoType = %(METADATA)d
             ORDER BY item, version
     """ % d, args)
 
@@ -86,12 +101,47 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None):
 
     nodeList = datamodel.NodeList(total = len(filteredL), start = 0)
 
-    for (name, version, ts) in filteredL:
+    addList = []
+    for (name, version, ts, sourceName, metadata) in filteredL:
+        addList.append((sourceName,
+                str(versions.VersionFromString(version).getSourceVersion())))
+
+    schema.resetTable(cu, 'tmpNVF')
+
+    # This is painful, but it converts the source name from a blob to
+    # a string
+    db.bulkload("tmpNVF", addList, ["name", "version"])
+    cu.execute("""
+        SELECT ChangeLogs.name, ChangeLogs.message
+            FROM tmpNVF JOIN Items AS SourceItems ON
+                tmpNVF.name = SourceItems.item
+            LEFT OUTER JOIN Versions AS SourceVersion ON
+                tmpNVF.version = SourceVersion.version
+            LEFT OUTER JOIN Nodes ON
+                SourceItems.itemId = Nodes.itemId AND
+                SourceVersion.versionId = Nodes.versionId
+            LEFT OUTER JOIN ChangeLogs USING (nodeId)
+    """)
+
+    for (name, version, ts, sourceName, metadata), (clName, clMessage) in \
+                    itertools.izip(filteredL, cu):
         frzVer = versions.strToFrozen(version,
                                       [ x for x in ts.split(":") ])
         ver = versions.ThawVersion(frzVer)
 
-        nodeList.append(name = name, version = ver, mkUrl = mkUrl)
+        shortdesc = None
+
+        if metadata:
+            md = trove.Metadata(metadata)
+            shortdesc = md.get()['licenses']
+
+        if clName:
+            cl = datamodel.ChangeLog(name = clName, message = clMessage)
+        else:
+            cl = None
+
+        nodeList.append(name = name, version = ver, mkUrl = mkUrl,
+                        changeLog = cl, shortdesc = shortdesc)
 
     return nodeList
 
