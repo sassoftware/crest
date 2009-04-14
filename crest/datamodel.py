@@ -128,8 +128,9 @@ class Troves(BaseObject):
 
 class Node(BaseObject):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'troves' : str })
+    _xobj = xobj.XObjMetadata()
     name = str
+    troves = str
     version = VersionSummary
     flavor = str
 
