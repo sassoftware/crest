@@ -31,6 +31,17 @@ class BaseObject(object):
             else:
                 raise TypeError, 'unknown constructor parameter %s' % key
 
+class VersionSummary(BaseObject):
+
+    revision = str
+    ordering = float
+
+    def __init__(self, v):
+        self.revision = str(v.trailingRevision())
+        # we don't use getTimestamp here because 0 is okay...
+        ts = v.trailingRevision().timeStamp
+        self.ordering = ts
+
 class Version(BaseObject):
 
     full = str
@@ -65,26 +76,6 @@ class BaseTroveInfo(BaseObject):
 class TroveIdent(BaseTroveInfo):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
-
-class TroveIdentList(BaseObject):
-
-    _xobj = xobj.XObjMetadata(tag = 'trovelist',
-                              attributes = { 'total' : int, 'start' : int,
-                                             'id' : str, 'href' : str } )
-    troveList = [ TroveIdent ]
-
-    def append(self, name = None, version = None, flavor = None, mkUrl = None):
-        self.troveList.append(TroveIdent(name = name, version = version,
-                                         flavor = flavor, mkUrl = mkUrl))
-
-class Label(BaseObject):
-
-    name = str
-    latest = TroveIdentList
-
-class FileId(xobj.XObj):
-
-    _xobj = xobj.XObjMetadata(attributes = { 'href' : str })
 
 class FileReference(BaseObject):
 
@@ -126,6 +117,74 @@ class SingleTrove(TroveIdent):
     def addClonedFrom(self, name, version, flavor, mkUrl = None):
         self.clonedfrom.append(BaseTroveInfo(name = name,version = version,
                                              flavor = flavor, mkUrl = mkUrl))
+
+class Troves(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'troves')
+    trove = [ SingleTrove ]
+
+    def append(self, trv):
+        self.trove.append(trv)
+
+class Node(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'troves' : str })
+    name = str
+    version = VersionSummary
+    flavor = str
+
+    def __init__(self, version = None, mkUrl = None, **kwargs):
+        BaseObject.__init__(self, **kwargs)
+        self.version = VersionSummary(version)
+        if mkUrl:
+            host = version.trailingLabel().getHost()
+            self.troves = mkUrl('troves', "%s=%s" % (self.name, version),
+                                host = host)
+
+class BaseNodeList(BaseObject):
+    _xobj = xobj.XObjMetadata(attributes = { 'total' : int, 'start' : int,
+                                             'id' : str, 'href' : str })
+    node = [ Node ]
+
+    def append(self, name = None, version = None, mkUrl = None):
+        self.node.append(Node(name = name, version = version, mkUrl = mkUrl))
+
+class NodeList(BaseNodeList):
+    _xobj = xobj.XObjMetadata(tag = 'nodelist',
+                              attributes = { 'total' : int, 'start' : int,
+                                             'id' : str })
+    node = [ Node ]
+
+class BaseTroveIdentList(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'total' : int, 'start' : int,
+                                             'id' : str } )
+    troveList = [ TroveIdent ]
+    summary = BaseNodeList
+
+    def append(self, name = None, version = None, flavor = None, mkUrl = None):
+        self.troveList.append(TroveIdent(name = name, version = version,
+                                         flavor = flavor, mkUrl = mkUrl))
+
+    def __init__(self, **kwargs):
+        BaseObject.__init__(self, **kwargs)
+
+class TroveIdentList(BaseTroveIdentList):
+
+    troveList = [ TroveIdent ]
+    _xobj = xobj.XObjMetadata(tag = 'trovelist',
+                              attributes = { 'total' : int, 'start' : int,
+                                             'id' : str } )
+
+class Label(BaseObject):
+
+    name = str
+    latest = BaseTroveIdentList
+    nodelist = BaseNodeList
+
+class FileId(xobj.XObj):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'href' : str })
 
 class FileObj(BaseObject):
 
@@ -189,13 +248,21 @@ class CharacterDeviceFile(_DeviceFile):
 class Repository(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'repository')
-    label = [ str ]
+    label = [ Label ]
     trovelist = TroveIdentList
 
     def appendLabel(self, labelStr, mkUrl = None):
         l = Label(name = labelStr)
         if mkUrl:
-            l.latest = TroveIdentList(href =
-                            mkUrl('trove',  [ ('label', labelStr) ]))
+            l.latest = TroveIdentList(
+                    id = mkUrl('trove',  [ ('label', labelStr) ])
+            )
+            l.summary = BaseNodeList(
+                        href = mkUrl('node', [ ('label', labelStr ),
+                                               ('type', 'package' ),
+                                               ('type', 'group'),
+                                               ('type', 'fileset') ] )
+            )
+
         self.label.append(l)
 

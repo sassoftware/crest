@@ -39,19 +39,37 @@ class RestController(controller.RestController):
 
     pass
 
+class GetNode(RestController):
+
+    def index(self, request, cu = None, roleIds = None, *args, **kwargs):
+        label = request.GET.get('label', None)
+
+        types = request.GET.get('type', [])
+        if type(types) != list:
+            types = [ types ]
+        types = set(types)
+
+        troves = repquery.searchNodes(cu, roleIds, label = label,
+                                      mkUrl = request.makeUrl,
+                                      filterSet = types)
+        return XMLResponse(xobj.toxml(troves, None))
+
 class GetTrove(RestController):
+
+    modelName = "troveString"
+    modelRegex = '.*\[.*\]'
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         label = request.GET.get('label', None)
         name = request.GET.get('name', None)
-        types = request.GET.get('type', [])
         latest = request.GET.get('latest', 1)
+
+        types = request.GET.get('type', [])
         if type(types) != list:
             types = [ types ]
+        types = set(types)
 
         latest = (latest != '0')
-
-        types = set(types)
 
         start = int(request.GET.get('start', 0))
         if 'limit' in request.GET:
@@ -67,9 +85,6 @@ class GetTrove(RestController):
 
         return XMLResponse(xobj.toxml(troves, None))
 
-    modelName = "troveString"
-    modelRegex = '.*\[.*\]'
-
     def get(self, request, cu = None, roleIds = None, troveString = None,
             repos = None, *args, **kwargs):
         name, rest = troveString.split('=', 2)
@@ -77,6 +92,22 @@ class GetTrove(RestController):
         flavor = flavor[:-1]
 
         x = repquery.getTrove(cu, roleIds, name, version, flavor,
+                              mkUrl = request.makeUrl, thisHost = request.host)
+        if x is None:
+            raise NotImplementedError
+
+        return XMLResponse(xobj.toxml(x, None))
+
+class GetTroves(RestController):
+
+    modelName = "troveString"
+    modelRegex = '.*'
+
+    def get(self, request, cu = None, roleIds = None, troveString = None,
+            repos = None, *args, **kwargs):
+        name, version = troveString.split('=', 2)
+
+        x = repquery.getTroves(cu, roleIds, name, version,
                               mkUrl = request.makeUrl, thisHost = request.host)
         if x is None:
             raise NotImplementedError
@@ -107,8 +138,10 @@ class GetFile(RestController):
 
 class Controller(RestController):
 
-    urls = { 'trove'  : GetTrove,
-             'file'   : GetFile }
+    urls = { 'node'         : GetNode,
+             'trove'        : GetTrove,
+             'troves'       : GetTroves,
+             'file'         : GetFile }
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         l = repquery.getRepository(cu, roleIds, mkUrl = request.makeUrl)

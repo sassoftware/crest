@@ -20,6 +20,81 @@ from conary.deps import deps
 from conary.lib.sha1helper import sha1ToString, md5ToString, sha1FromString
 from conary.server import schema
 
+def typeFilter(l, filterSet):
+    if not filterSet:
+        return l
+
+    filters = []
+    if 'group' in filterSet:
+        filters.append(trove.troveIsGroup)
+    if 'package' in filterSet:
+        filters.append(trove.troveIsPackage)
+    if 'component' in filterSet:
+        filters.append(trove.troveIsComponent)
+    if 'fileset' in filterSet:
+        filters.append(trove.troveIsFileSet)
+    if 'collection' in filterSet:
+        filters.append(trove.troveIsCollection)
+    if 'source' in filterSet:
+        filters.append(trove.troveIsSourceComponent)
+    if 'binarycomponent' in filterSet:
+        filters.append(lambda x: trove.troveIsComponent(x) and
+                                 not trove.troveIsSourceComponent(x))
+
+    filters.append(None)
+
+    filteredL = []
+    for item in l:
+        if filters:
+            for f in filters:
+                if f and f(item[0]): break
+            if f is None:
+                continue
+
+        filteredL.append(item)
+
+    return filteredL
+
+def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None):
+    args = []
+    d = { 'labelCheck' : '' }
+    d['roleIds'] = ",".join( str(x) for x in roleIds)
+
+    if label:
+        d['labelCheck'] = "label = ? AND"
+        args.append(label)
+
+    cu.execute("""
+        SELECT item, version, ts FROM
+            (SELECT DISTINCT Nodes.itemId AS itemId,
+                             Nodes.versionId AS versionId,
+                             Nodes.timeStamps AS ts FROM Labels
+                JOIN LabelMap USING (labelId)
+                JOIN LatestCache USING (itemId, branchId)
+                JOIN Nodes USING (itemId, versionId)
+                WHERE %(labelCheck)s
+                      LatestCache.latestType = 1 AND
+                      LatestCache.userGroupId in (%(roleIds)s))
+            AS idTable JOIN
+            Items USING (itemId) JOIN
+            Versions ON (idTable.versionId = Versions.versionId)
+            ORDER BY item, version
+    """ % d, args)
+
+    l = list(cu)
+    filteredL = typeFilter(l, filterSet)
+
+    nodeList = datamodel.NodeList(total = len(filteredL), start = 0)
+
+    for (name, version, ts) in filteredL:
+        frzVer = versions.strToFrozen(version,
+                                      [ x for x in ts.split(":") ])
+        ver = versions.ThawVersion(frzVer)
+
+        nodeList.append(name = name, version = ver, mkUrl = mkUrl)
+
+    return nodeList
+
 def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                  latest = True, start = 0, limit = None, name = None):
     d = { 'labelCheck' : '', 'nameCheck' : '' }
@@ -90,43 +165,15 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
                 ORDER BY item, version, flavor
         """ % d, *args)
 
-    filters = []
-    if 'group' in filterSet:
-        filters.append(trove.troveIsGroup)
-    if 'package' in filterSet:
-        filters.append(trove.troveIsPackage)
-    if 'component' in filterSet:
-        filters.append(trove.troveIsComponent)
-    if 'fileset' in filterSet:
-        filters.append(trove.troveIsFileSet)
-    if 'collection' in filterSet:
-        filters.append(trove.troveIsCollection)
-    if 'source' in filterSet:
-        filters.append(trove.troveIsSourceComponent)
-    if 'binarycomponent' in filterSet:
-        filters.append(lambda x: trove.troveIsComponent(x) and
-                                 not trove.troveIsSourceComponent(x))
-
-    if filters:
-        filters.append(None)
-
     l = list(cu)
+    filteredL = typeFilter(l, filterSet)
 
     if regex:
-        l = [ x for x in l if regex.match(x[0]) ]
-
-    filteredL = []
-    for item in l:
-        if filters:
-            for f in filters:
-                if f and f(item[0]): break
-            if f is None:
-                continue
-
-        filteredL.append(item)
+        filteredL = [ x for x in filteredL if regex.match(x[0]) ]
 
     if limit is None:
         limit = len(filteredL) - start
+
     troveList = datamodel.TroveIdentList(total = len(filteredL), start = start)
 
     for (name, version, flavor, ts) in filteredL[start:start + limit]:
@@ -255,6 +302,29 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                              subFlavor, mkUrl = mkUrl)
 
     return t
+
+def getTroves(cu, roleIds, name, version, mkUrl = None,
+              thisHost = None):
+    cu.execute("""
+        SELECT flavor FROM Instances
+            JOIN Items USING (itemId)
+            JOIN Versions ON (Instances.versionId = Versions.versionId)
+            JOIN Flavors ON (Instances.flavorId = Flavors.flavorId)
+            JOIN UserGroupInstancesCache AS ugi
+                ON (instances.instanceId = ugi.instanceId AND
+                    ugi.userGroupId in (%s))
+        WHERE
+            item = ? AND version = ?
+    """ % ",".join( str(x) for x in roleIds), name, version)
+
+    flavors = [ str(deps.ThawFlavor(x[0])) for x in cu  ]
+
+    troves = datamodel.Troves()
+    for flavor in flavors:
+        troves.append(getTrove(cu, roleIds, name, version, flavor,
+                               mkUrl = mkUrl, thisHost = thisHost))
+
+    return troves
 
 def _getFileStream(cu, roleIds, fileId):
     cu.execute("""
