@@ -257,8 +257,8 @@ def getRepository(cu, roleIds, mkUrl = None):
 def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
              thisHost = None):
 
-    def buildTupleList(tuples, mkUrl = mkUrl):
-        l = datamodel.SimpleTroveIdentList()
+    def buildTupleList(tuples, name, mkUrl = mkUrl):
+        l = getattr(datamodel.SingleTrove, name)()
         for troveInfo in tuples.iter():
             l.append(name = troveInfo.name(), version = troveInfo.version(),
                      flavor = troveInfo.flavor(), mkUrl = mkUrl)
@@ -313,10 +313,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         kwargs['buildtime'] = int(troveInfo[trove._TROVEINFO_TAG_BUILDTIME]())
 
     if trove._TROVEINFO_TAG_SOURCENAME in troveInfo:
-        kwargs['source'] = datamodel.BaseTroveInfo(
-            name = troveInfo[trove._TROVEINFO_TAG_SOURCENAME](),
-            version = versions.VersionFromString(version).getSourceVersion(),
-            flavor = '', mkUrl = mkUrl)
+        kwargs['source'] = (troveInfo[trove._TROVEINFO_TAG_SOURCENAME](),
+            versions.VersionFromString(version).getSourceVersion(), '')
 
     if trove._TROVEINFO_TAG_SIZE in troveInfo:
         kwargs['size'] = troveInfo[trove._TROVEINFO_TAG_SIZE]()
@@ -331,7 +329,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     for (tag, tagName) in tupleLists:
         if tag in troveInfo:
-            kwargs[tagName] = buildTupleList(troveInfo[tag ], mkUrl = mkUrl)
+            kwargs[tagName] = buildTupleList(troveInfo[tag], tagName,
+                                             mkUrl = mkUrl)
 
     t = datamodel.SingleTrove(mkUrl = mkUrl, **kwargs)
 
@@ -399,7 +398,7 @@ def getTroves(cu, roleIds, name, version, mkUrl = None,
 
     flavors = [ str(deps.ThawFlavor(x[0])) for x in cu  ]
 
-    troves = datamodel.Troves()
+    troves = datamodel.TroveList()
     for flavor in flavors:
         troves.append(getTrove(cu, roleIds, name, version, flavor,
                                mkUrl = mkUrl, thisHost = thisHost))

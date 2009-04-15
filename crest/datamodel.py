@@ -77,7 +77,7 @@ class TroveIdent(BaseTroveInfo):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
 
-class SimpleTroveIdentList(BaseObject):
+class TroveIdentList(BaseObject):
 
     troveList = [ TroveIdent ]
 
@@ -101,10 +101,6 @@ class FileReference(BaseObject):
             host = versions.VersionFromString(version).trailingLabel().getHost()
             self.id = mkUrl('file', self.fileId, 'info', host = host)
 
-class ReferencedTrove(BaseTroveInfo):
-
-    pass
-
 class License(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
@@ -112,46 +108,100 @@ class License(BaseObject):
     def __init__(self, val):
         BaseObject.__init__(self, id = "http://%s" % val)
 
+class ListOfTroves(BaseObject):
+
+    displayname = str
+    troveList = TroveIdentList
+
+    def __init__(self, **kwargs):
+        self.troveList = TroveIdentList()
+        BaseObject.__init__(self, **kwargs)
+        self.displayname = self.__class__.DisplayName
+
+    def append(self, name = None, version = None, flavor = None, mkUrl = None):
+        self.troveList.append(name = name, version = version,
+                              flavor = flavor, mkUrl = mkUrl)
+
+class SourceTrove(ListOfTroves):
+
+    DisplayName = "Source"
+
+class IncludedTroves(ListOfTroves):
+
+    DisplayName = "Includes"
+
+class ClonedFrom(ListOfTroves):
+
+    DisplayName = "Cloned from"
+
+class BuildDeps(ListOfTroves):
+
+    DisplayName = "Built with"
+
+class PolicyProvider(ListOfTroves):
+
+    DisplayName = "Policy from"
+
+class LoadedTroves(ListOfTroves):
+
+    DisplayName = "Build troves loaded"
+
+class CopiedFrom(ListOfTroves):
+
+    DisplayName = "Groups copied from"
+
+class DerivedFrom(ListOfTroves):
+
+    DisplayName = "Derived from"
+
 class SingleTrove(TroveIdent):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
     fileref = [ FileReference ]
-    trove = [ ReferencedTrove ]
-    source = BaseTroveInfo
+    included = IncludedTroves
+    source = SourceTrove
     buildtime = long
-    clonedfrom = [ BaseTroveInfo ]
+    clonedfrom = ClonedFrom
     size = long
-    builddeps = SimpleTroveIdentList
-    policyprovider = SimpleTroveIdentList
-    loadedtroves = SimpleTroveIdentList
-    copiedfrom = SimpleTroveIdentList
-    copiedfrom = SimpleTroveIdentList
-    derivedfrom = SimpleTroveIdentList
+    builddeps = BuildDeps
+    policyprovider = PolicyProvider
+    loadedtroves = LoadedTroves
+    copiedfrom = CopiedFrom
+    derivedfrom = DerivedFrom
     license = [ License ]
     shortdesc = str
     longdesc = str
     crypto = str
 
-    def addFile(self, f):
-        self.fileref.append(f)
+    def __init__(self, source = None, licenses = None, mkUrl = None,
+                 **kwargs):
+        self.source = SourceTrove()
+        self.included = IncludedTroves()
+        self.clonedfrom = ClonedFrom()
 
-    def addReferencedTrove(self, name, version, flavor, mkUrl = None):
-        self.trove.append(ReferencedTrove(name = name, version = version,
-                                           flavor = flavor, mkUrl = mkUrl))
+        TroveIdent.__init__(self, mkUrl = mkUrl, **kwargs)
+        if source:
+            self.source.append(name = source[0], version = source[1],
+                               flavor = source[2], mkUrl = mkUrl)
 
-    def addClonedFrom(self, name, version, flavor, mkUrl = None):
-        self.clonedfrom.append(BaseTroveInfo(name = name,version = version,
-                                             flavor = flavor, mkUrl = mkUrl))
-
-    def __init__(self, licenses = None, **kwargs):
-        TroveIdent.__init__(self, **kwargs)
         if licenses:
             for license in licenses:
                 self.license.append(License(license))
 
-class Troves(BaseObject):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'troves')
+    def addFile(self, f):
+        self.fileref.append(f)
+
+    def addReferencedTrove(self, name, version, flavor, mkUrl = None):
+        self.included.append(name = name, version = version,
+                             flavor = flavor, mkUrl = mkUrl)
+
+    def addClonedFrom(self, name, version, flavor, mkUrl = None):
+        self.clonedfrom.append(name = name, version = version,
+                               flavor = flavor, mkUrl = mkUrl)
+class TroveList(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trovelist')
     trove = [ SingleTrove ]
 
     def append(self, trv):
