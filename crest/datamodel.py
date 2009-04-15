@@ -85,10 +85,13 @@ class TroveIdentList(BaseObject):
         self.troveList.append(TroveIdent(name = name, version = version,
                                          flavor = flavor, mkUrl = mkUrl))
 
-class FileReference(BaseObject):
+class Inode(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
 
+class FileReference(BaseObject):
+
+    inode = Inode
     path = str
     version = str
     fileId = str
@@ -99,7 +102,8 @@ class FileReference(BaseObject):
         BaseObject.__init__(self, fileId = fileId, version = version, **kwargs)
         if mkUrl:
             host = versions.VersionFromString(version).trailingLabel().getHost()
-            self.id = mkUrl('file', self.fileId, 'info', host = host)
+            self.inode = Inode(id = mkUrl('file', self.fileId, 'info',
+                               host = host))
 
 class License(BaseObject):
 
@@ -216,7 +220,7 @@ class Node(BaseObject):
 
     _xobj = xobj.XObjMetadata()
     name = str
-    troves = str
+    trovelist = TroveList
     version = VersionSummary
     flavor = str
     changeLog = ChangeLog
@@ -227,8 +231,9 @@ class Node(BaseObject):
         self.version = VersionSummary(version)
         if mkUrl:
             host = version.trailingLabel().getHost()
-            self.troves = mkUrl('troves', "%s=%s" % (self.name, version),
-                                host = host)
+            self.trovelist = \
+                TroveList(id = mkUrl('troves', "%s=%s" % (self.name, version),
+                          host = host))
 
 class BaseNodeList(BaseObject):
     _xobj = xobj.XObjMetadata(attributes = { 'total' : int, 'start' : int,
@@ -295,18 +300,22 @@ class XObjLong(long):
 
     pass
 
+class Content(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'href' : str })
+
 class RegularFile(FileObj):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'href' : str,
-                                             'id' : str },
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str },
                               tag = 'file')
     size = XObjLong
     sha1 = str
+    content = Content
 
     def __init__(self, mkUrl = None, fileId = None, **kwargs):
         FileObj.__init__(self, mkUrl = mkUrl, fileId = fileId, **kwargs)
         if mkUrl:
-            self.href = mkUrl('file', fileId, 'content')
+            self.content = Content(href = mkUrl('file', fileId, 'content'))
 
 class Directory(FileObj):
 
