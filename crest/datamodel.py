@@ -179,12 +179,9 @@ class SingleTrove(TroveIdent):
 
     def __init__(self, source = None, licenses = None, mkUrl = None,
                  **kwargs):
-        self.source = SourceTrove()
-        self.included = IncludedTroves()
-        self.clonedfrom = ClonedFrom()
-
         TroveIdent.__init__(self, mkUrl = mkUrl, **kwargs)
         if source:
+            self.source = SourceTrove()
             self.source.append(name = source[0], version = source[1],
                                flavor = source[2], mkUrl = mkUrl)
 
@@ -197,10 +194,16 @@ class SingleTrove(TroveIdent):
         self.fileref.append(f)
 
     def addReferencedTrove(self, name, version, flavor, mkUrl = None):
+        if self.included == IncludedTroves:
+            self.included = IncludedTroves()
+
         self.included.append(name = name, version = version,
                              flavor = flavor, mkUrl = mkUrl)
 
     def addClonedFrom(self, name, version, flavor, mkUrl = None):
+        if self.clonedfrom == ClonedFrom:
+            self.clonedfrom = ClonedFrom()
+
         self.clonedfrom.append(name = name, version = version,
                                flavor = flavor, mkUrl = mkUrl)
 class TroveList(BaseObject):
