@@ -99,7 +99,7 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
     l = list(cu)
     filteredL = typeFilter(l, filterSet)
 
-    nodeList = datamodel.NodeList(total = len(filteredL), start = 0)
+    nodeList = datamodel.NamedNodeList(total = len(filteredL), start = 0)
 
     addList = []
     for (name, version, ts, sourceName, metadata) in filteredL:
@@ -224,7 +224,8 @@ def searchTroves(cu, roleIds, label = None, filterSet = None, mkUrl = None,
     if limit is None:
         limit = len(filteredL) - start
 
-    troveList = datamodel.TroveIdentList(total = len(filteredL), start = start)
+    troveList = datamodel.NamedTroveIdentList(total = len(filteredL),
+                                              start = start)
 
     for (name, version, flavor, ts) in filteredL[start:start + limit]:
         flavor = str(deps.ThawFlavor(flavor))

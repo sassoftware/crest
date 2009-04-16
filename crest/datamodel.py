@@ -12,7 +12,7 @@
 # full details.
 #
 
-import urllib
+import copy, urllib
 
 from xobj import xobj
 from conary import versions
@@ -75,15 +75,26 @@ class BaseTroveInfo(BaseObject):
 
 class TroveIdent(BaseTroveInfo):
 
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
 
 class TroveIdentList(BaseObject):
 
-    troveList = [ TroveIdent ]
+    _xobj = xobj.XObjMetadata(attributes = { 'total' : int, 'start' : int,
+                                             'id' : str } )
+    trove = [ TroveIdent ]
 
     def append(self, name = None, version = None, flavor = None, mkUrl = None):
-        self.troveList.append(TroveIdent(name = name, version = version,
-                                         flavor = flavor, mkUrl = mkUrl))
+        self.trove.append(TroveIdent(name = name, version = version,
+                                     flavor = flavor, mkUrl = mkUrl))
+
+    def __init__(self, **kwargs):
+        BaseObject.__init__(self, **kwargs)
+
+class NamedTroveIdentList(TroveIdentList):
+
+    trove = [ TroveIdent ]
+    _xobj = copy.copy(TroveIdentList._xobj)
+    _xobj.tag = 'trovelist'
 
 class Inode(BaseObject):
 
@@ -108,15 +119,15 @@ class FileReference(BaseObject):
 class ListOfTroves(BaseObject):
 
     displayname = str
-    troveList = TroveIdentList
+    trovelist = TroveIdentList
 
     def __init__(self, **kwargs):
-        self.troveList = TroveIdentList()
+        self.trovelist = TroveIdentList()
         BaseObject.__init__(self, **kwargs)
         self.displayname = self.__class__.DisplayName
 
     def append(self, name = None, version = None, flavor = None, mkUrl = None):
-        self.troveList.append(name = name, version = version,
+        self.trovelist.append(name = name, version = version,
                               flavor = flavor, mkUrl = mkUrl)
 
 class SourceTrove(ListOfTroves):
@@ -210,7 +221,7 @@ class Node(BaseObject):
 
     _xobj = xobj.XObjMetadata()
     name = str
-    trovelist = TroveList
+    trovelist = TroveIdentList
     version = VersionSummary
     flavor = str
     changeLog = ChangeLog
@@ -222,10 +233,11 @@ class Node(BaseObject):
         if mkUrl:
             host = version.trailingLabel().getHost()
             self.trovelist = \
-                TroveList(id = mkUrl('troves', "%s=%s" % (self.name, version),
+                TroveIdentList(id = mkUrl('troves', "%s=%s" %
+                                                (self.name, version),
                           host = host))
 
-class BaseNodeList(BaseObject):
+class NodeList(BaseObject):
     _xobj = xobj.XObjMetadata(attributes = { 'total' : int, 'start' : int,
                                              'id' : str, 'href' : str })
     node = [ Node ]
@@ -235,38 +247,17 @@ class BaseNodeList(BaseObject):
         self.node.append(Node(name = name, version = version, mkUrl = mkUrl,
                               changeLog = changeLog, shortdesc = None))
 
-class NodeList(BaseNodeList):
+class NamedNodeList(NodeList):
     _xobj = xobj.XObjMetadata(tag = 'nodelist',
                               attributes = { 'total' : int, 'start' : int,
                                              'id' : str })
     node = [ Node ]
 
-class BaseTroveIdentList(BaseObject):
-
-    _xobj = xobj.XObjMetadata(attributes = { 'total' : int, 'start' : int,
-                                             'id' : str } )
-    troveList = [ TroveIdent ]
-    summary = BaseNodeList
-
-    def append(self, name = None, version = None, flavor = None, mkUrl = None):
-        self.troveList.append(TroveIdent(name = name, version = version,
-                                         flavor = flavor, mkUrl = mkUrl))
-
-    def __init__(self, **kwargs):
-        BaseObject.__init__(self, **kwargs)
-
-class TroveIdentList(BaseTroveIdentList):
-
-    troveList = [ TroveIdent ]
-    _xobj = xobj.XObjMetadata(tag = 'trovelist',
-                              attributes = { 'total' : int, 'start' : int,
-                                             'id' : str } )
-
 class Label(BaseObject):
 
     name = str
-    latest = BaseTroveIdentList
-    nodelist = BaseNodeList
+    latest = TroveIdentList
+    nodelist = NodeList
 
 class FileId(xobj.XObj):
 
@@ -347,7 +338,7 @@ class Repository(BaseObject):
             l.latest = TroveIdentList(
                     id = mkUrl('trove',  [ ('label', labelStr) ])
             )
-            l.summary = BaseNodeList(
+            l.summary = NodeList(
                         href = mkUrl('node', [ ('label', labelStr ),
                                                ('type', 'package' ),
                                                ('type', 'group'),
