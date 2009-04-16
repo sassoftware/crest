@@ -321,11 +321,13 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     if trove._TROVEINFO_TAG_METADATA in troveInfo:
         md = troveInfo[trove._TROVEINFO_TAG_METADATA].get()
-        kwargs['licenses'] = md['licenses']
         kwargs['shortdesc'] = md['shortDesc']
         kwargs['longdesc'] = md['longDesc']
+
+        if md['licenses']:
+            kwargs['license'] = [ x for x in md['licenses' ]]
         if md['crypto']:
-            kwargs['crypto'] = " ".join(md['crypto'])
+            kwargs['crypto'] = [ x for x in md['crypto'] ]
 
     for (tag, tagName) in tupleLists:
         if tag in troveInfo:

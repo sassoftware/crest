@@ -105,13 +105,6 @@ class FileReference(BaseObject):
             self.inode = Inode(id = mkUrl('file', self.fileId, 'info',
                                host = host))
 
-class License(BaseObject):
-
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
-
-    def __init__(self, val):
-        BaseObject.__init__(self, id = "http://%s" % val)
-
 class ListOfTroves(BaseObject):
 
     displayname = str
@@ -172,23 +165,17 @@ class SingleTrove(TroveIdent):
     loadedtroves = LoadedTroves
     copiedfrom = CopiedFrom
     derivedfrom = DerivedFrom
-    license = [ License ]
+    license = [ str ]
     shortdesc = str
     longdesc = str
-    crypto = str
+    crypto = [ str ]
 
-    def __init__(self, source = None, licenses = None, mkUrl = None,
-                 **kwargs):
+    def __init__(self, source = None, mkUrl = None, **kwargs):
         TroveIdent.__init__(self, mkUrl = mkUrl, **kwargs)
         if source:
             self.source = SourceTrove()
             self.source.append(name = source[0], version = source[1],
                                flavor = source[2], mkUrl = mkUrl)
-
-        if licenses:
-            for license in licenses:
-                self.license.append(License(license))
-
 
     def addFile(self, f):
         self.fileref.append(f)
