@@ -256,7 +256,7 @@ def getRepository(cu, roleIds, mkUrl = None):
     return repository
 
 def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
-             thisHost = None):
+             thisHost = None, displayFlavor = None):
 
     def buildTupleList(tuples, name, mkUrl = mkUrl):
         l = getattr(datamodel.SingleTrove, name)()
@@ -309,6 +309,9 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     kwargs = { 'name' : name, 'version' : versions.VersionFromString(version),
                'flavor' : flavor }
+
+    if displayFlavor is not None:
+        kwargs['displayflavor'] = displayFlavor
 
     if trove._TROVEINFO_TAG_BUILDTIME in troveInfo:
         kwargs['buildtime'] = int(troveInfo[trove._TROVEINFO_TAG_BUILDTIME]())
@@ -399,12 +402,18 @@ def getTroves(cu, roleIds, name, version, mkUrl = None,
             item = ? AND version = ?
     """ % ",".join( str(x) for x in roleIds), name, version)
 
-    flavors = [ str(deps.ThawFlavor(x[0])) for x in cu  ]
+    flavors = [ deps.ThawFlavor(x[0]) for x in cu  ]
+    commonFlavor = flavors[0]
+    for flavor in flavors[1:]:
+        commonFlavor = commonFlavor.intersection(flavor)
+
 
     troves = datamodel.TroveList()
     for flavor in flavors:
-        troves.append(getTrove(cu, roleIds, name, version, flavor,
-                               mkUrl = mkUrl, thisHost = thisHost))
+        troves.append(getTrove(cu, roleIds, name, version, str(flavor),
+                               mkUrl = mkUrl, thisHost = thisHost,
+                               displayFlavor =
+                                    str(flavor.difference(commonFlavor))))
 
     return troves
 

@@ -176,6 +176,7 @@ class SingleTrove(TroveIdent):
     shortdesc = str
     longdesc = str
     crypto = [ str ]
+    displayflavor = str
 
     def __init__(self, source = None, mkUrl = None, **kwargs):
         TroveIdent.__init__(self, mkUrl = mkUrl, **kwargs)
