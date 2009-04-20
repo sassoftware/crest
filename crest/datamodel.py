@@ -57,7 +57,7 @@ class Version(BaseObject):
         ts = v.trailingRevision().timeStamp
         self.ordering = ts
 
-class BaseTroveInfo(BaseObject):
+class TroveIdent(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
     name = str
@@ -72,10 +72,6 @@ class BaseTroveInfo(BaseObject):
             self.id = mkUrl('trove', "%s=%s[%s]" % (self.name, version,
                                                     self.flavor),
                             host = host)
-
-class TroveIdent(BaseTroveInfo):
-
-    _xobj = xobj.XObjMetadata(attributes = { 'id' : str })
 
 class TroveIdentList(BaseObject):
 
