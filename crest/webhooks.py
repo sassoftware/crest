@@ -32,6 +32,8 @@ class ReposCallback:
 
         entitlementList = webauth.parseEntitlement(
                             request.headers.get('X-Conary-Entitlement', ''))
+        if getattr(request, 'auth', None) is None:
+            request.auth = ('anonymous', 'anonymous')
         authToken = ( request.auth[0], request.auth[1], entitlementList )
 
         kwargs['repos'] = self.repos
