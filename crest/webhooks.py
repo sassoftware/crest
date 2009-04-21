@@ -53,7 +53,7 @@ class ReposCallback:
             self.repos.db.commit()
 
     def processException(self, request, excClass, exception, tb):
-        if repos.db.inTransaction(default=True):
+        if self.repos.db.inTransaction(default=True):
             # Commit if someone left a transaction open (or the
             # DB doesn't have a way to tell)
             self.repos.db.rollback()

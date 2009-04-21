@@ -103,6 +103,8 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
 
     addList = []
     for (name, version, ts, sourceName, metadata) in filteredL:
+	if sourceName is None and trove.troveIsSourceComponent(name):
+            sourceName = name
         addList.append((sourceName,
                 str(versions.VersionFromString(version).getSourceVersion())))
 
