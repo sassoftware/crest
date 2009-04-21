@@ -110,7 +110,8 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
 
     # This is painful, but it converts the source name from a blob to
     # a string
-    db.bulkload("tmpNVF", addList, ["name", "version"])
+    db.bulkload("tmpNVF", addList, ["name", "version"],
+                start_transaction = False)
     cu.execute("""
         SELECT ChangeLogs.name, ChangeLogs.message
             FROM tmpNVF JOIN Items AS SourceItems ON

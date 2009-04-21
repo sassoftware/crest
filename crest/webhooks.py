@@ -46,6 +46,18 @@ class ReposCallback:
         # unnatural act
         request.makeUrl = lambda *x, **kw: (self.makeUrl(request, *x, **kw))
 
+    def processResponse(self, request, res):
+        if self.repos.db.inTransaction(default=True):
+            # Commit if someone left a transaction open (or the
+            # DB doesn't have a way to tell)
+            self.repos.db.commit()
+
+    def processException(self, request, excClass, exception, tb):
+        if repos.db.inTransaction(default=True):
+            # Commit if someone left a transaction open (or the
+            # DB doesn't have a way to tell)
+            self.repos.db.rollback()
+
     def makeUrl(self, request, *args, **kwargs):
         if request.repos is not None and 'host' in kwargs:
             if kwargs['host'] not in request.repos.serverNameList:
