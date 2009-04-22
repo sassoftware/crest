@@ -341,6 +341,19 @@ class Repository(BaseObject):
                                                ('type', 'group'),
                                                ('type', 'fileset') ] )
             )
+            l.groups = NodeList(
+                        href = mkUrl('node', [ ('label', labelStr ),
+                                               ('type', 'group') ] )
+            )
+            l.packages = NodeList(
+                        href = mkUrl('node', [ ('label', labelStr ),
+                                               ('type', 'package'),
+                                               ('type', 'fileset') ] )
+            )
+            l.sources = NodeList(
+                        href = mkUrl('node', [ ('label', labelStr ),
+                                               ('type', 'source') ] )
+            )
 
         self.label.append(l)
 
