@@ -263,7 +263,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     def buildTupleList(tuples, name, mkUrl = mkUrl):
         l = getattr(datamodel.SingleTrove, name)()
-        for troveInfo in sorted(tuples):
+        for troveInfo in sorted(tuples.iter()):
             l.append(name = troveInfo.name(), version = troveInfo.version(),
                      flavor = troveInfo.flavor(), mkUrl = mkUrl)
 
