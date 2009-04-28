@@ -61,7 +61,8 @@ class ReposCallback:
     def makeUrl(self, request, *args, **kwargs):
         if request.repos is not None and 'host' in kwargs:
             if kwargs['host'] not in request.repos.serverNameList:
-                return 'http://%s/%s' % (kwargs['host'], '/'.join(args))
+                return ('http://%s/conary/api/%s' %
+                            (kwargs['host'], '/'.join(args)))
         return request.url(*args)
 
 class AuthCallback(restlib.auth.BasicAuthCallback):
