@@ -336,7 +336,10 @@ class Repository(BaseObject):
                     id = mkUrl('trove',  [ ('label', labelStr) ])
             )
             l.summary = NodeList(
-                        href = mkUrl('node', [ ('label', labelStr ) ] )
+                        href = mkUrl('node', [ ('label', labelStr ),
+                                               ('type', 'package' ),
+                                               ('type', 'group'),
+                                               ('type', 'fileset') ] )
             )
             l.groups = NodeList(
                         href = mkUrl('node', [ ('label', labelStr ),
