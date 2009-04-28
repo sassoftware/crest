@@ -18,6 +18,7 @@ from restlib.http import simplehttp
 from restlib.http import modpython as restmodpython
 from conary.web import webauth
 import sys
+import urllib
 
 import root
 
@@ -62,7 +63,7 @@ class ReposCallback:
         if request.repos is not None and 'host' in kwargs:
             if kwargs['host'] not in request.repos.serverNameList:
                 return ('http://%s/conary/api/%s' %
-                            (kwargs['host'], '/'.join(args)))
+                            (kwargs['host'], urllib.quote('/'.join(args))))
         return request.url(*args)
 
 class AuthCallback(restlib.auth.BasicAuthCallback):
