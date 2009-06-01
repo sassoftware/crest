@@ -12,7 +12,7 @@
 # full details.
 #
 
-import copy, urllib
+import copy, os, urllib
 
 from xobj import xobj
 from conary import versions
@@ -105,11 +105,13 @@ class FileReference(BaseObject):
     pathId = str
 
     def __init__(self, mkUrl = None, fileId = None, version = None,
-                 thisHost = None, **kwargs):
-        BaseObject.__init__(self, fileId = fileId, version = version, **kwargs)
+                 thisHost = None, path = None, **kwargs):
+        BaseObject.__init__(self, fileId = fileId, version = version,
+                            path = path, **kwargs)
         if mkUrl:
             host = versions.VersionFromString(version).trailingLabel().getHost()
             self.inode = Inode(id = mkUrl('file', self.fileId, 'info',
+                               [ ( 'path', os.path.basename(path)) ],
                                host = host))
 
 class ListOfTroves(BaseObject):
@@ -290,10 +292,11 @@ class RegularFile(FileObj):
     sha1 = str
     content = Content
 
-    def __init__(self, mkUrl = None, fileId = None, **kwargs):
+    def __init__(self, mkUrl = None, fileId = None, path = None, **kwargs):
         FileObj.__init__(self, mkUrl = mkUrl, fileId = fileId, **kwargs)
         if mkUrl:
-            self.content = Content(href = mkUrl('file', fileId, 'content'))
+            self.content = Content(href = mkUrl('file', fileId, 'content',
+                                                [ ( 'path', path) ]))
 
 class Directory(FileObj):
 

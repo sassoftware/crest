@@ -440,7 +440,7 @@ def _getFileStream(cu, roleIds, fileId):
 
     return cu.frombinary(l[0][0])
 
-def getFileInfo(cu, roleIds, fileId, mkUrl = None):
+def getFileInfo(cu, roleIds, fileId, mkUrl = None, path = None):
     stream = _getFileStream(cu, roleIds, fileId)
     if not stream:
         return None
@@ -454,6 +454,7 @@ def getFileInfo(cu, roleIds, fileId, mkUrl = None):
     if f.lsTag == '-':
         fx = datamodel.RegularFile(size = int(f.contents.size()),
                                    sha1 = sha1ToString(f.contents.sha1()),
+                                   path = path,
                                    **args)
     elif f.lsTag == 'l':
         fx = datamodel.SymlinkFile(target = f.target(), **args)

@@ -122,7 +122,9 @@ class GetFile(RestController):
              'content' : { 'GET' : 'content' }}
 
     def info(self, request, cu, roleIds = None, fileId = None, **kwargs):
-        x = repquery.getFileInfo(cu, roleIds, fileId, mkUrl = request.makeUrl)
+        path = request.GET.get('path', None)
+        x = repquery.getFileInfo(cu, roleIds, fileId, mkUrl = request.makeUrl,
+                                 path = path)
         if x is None:
             raise NotImplementedError
 
@@ -134,8 +136,15 @@ class GetFile(RestController):
         if sha1 is None:
             raise NotImplementedError
 
-        path = repos.repos.contentsStore.hashToPath(sha1)
-        return FileResponse(path, gzipped = True, remotePath = '%s.gz' % sha1)
+        localPath = repos.repos.contentsStore.hashToPath(sha1)
+
+        remotePath = request.GET.get('path', None)
+        if remotePath:
+            remotePath += '.gz'
+        else:
+            remotePath = '%s.gz' % sha1
+
+        return FileResponse(localPath, gzipped = True, remotePath = remotePath)
 
 class Controller(RestController):
 
