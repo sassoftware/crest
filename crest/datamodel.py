@@ -295,8 +295,8 @@ class RegularFile(FileObj):
     def __init__(self, mkUrl = None, fileId = None, path = None, **kwargs):
         FileObj.__init__(self, mkUrl = mkUrl, fileId = fileId, **kwargs)
         if mkUrl:
-            self.content = Content(href = mkUrl('file', fileId, 'content',
-                                                [ ( 'path', path) ]))
+            self.content = Content(href=mkUrl('file', fileId, 'content', path))
+
 
 class Directory(FileObj):
 

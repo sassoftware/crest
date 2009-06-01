@@ -438,14 +438,16 @@ def _getFileStream(cu, roleIds, fileId):
     if not l:
         return None
 
-    return cu.frombinary(l[0][0])
+    bin = cu.frombinary(l[0][0])
+    if bin is not None:
+        return files.ThawFile(bin, None)
+    return None
+
 
 def getFileInfo(cu, roleIds, fileId, mkUrl = None, path = None):
-    stream = _getFileStream(cu, roleIds, fileId)
-    if not stream:
+    f = _getFileStream(cu, roleIds, fileId)
+    if f is None:
         return None
-
-    f = files.ThawFile(stream, None)
 
     args = { 'owner' : f.inode.owner(), 'group' : f.inode.group(),
              'mtime' : f.inode.mtime(), 'perms' : f.inode.perms(),
@@ -477,9 +479,9 @@ def getFileInfo(cu, roleIds, fileId, mkUrl = None, path = None):
     return fx
 
 def getFileSha1(cu, roleIds, fileId):
-    stream = _getFileStream(cu, roleIds, fileId)
-    if not files.frozenFileHasContents(stream):
-        return None
+    fStream = _getFileStream(cu, roleIds, fileId)
+    if not fStream or not hasattr(fStream, 'contents'):
+        # Missing or no contents (not a regular file).
+        return None, None
 
-    sha1 = files.frozenFileContentInfo(stream).sha1()
-    return sha1ToString(sha1)
+    return sha1ToString(fStream.contents.sha1()), fStream.flags.isConfig()

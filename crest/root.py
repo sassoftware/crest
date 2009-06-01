@@ -26,14 +26,22 @@ class XMLResponse(response.Response):
 
 class FileResponse(response.FileResponse):
 
-    def __init__(self, path, remotePath = None, gzipped = False):
-        response.FileResponse.__init__(self, path = path)
-        self.headers['cache-control'] = 'private, must-revalidate'
-        self.headers['Content-Disposition'] = 'attachment'
-        if remotePath:
-            self.headers['Content-Disposition'] += '; filename=%s' % remotePath
-        #if gzipped:
-            #self.headers['content-encoding'] = 'gzip'
+    def __init__(self, path, remotePath=None, gzipped=False, download=True):
+        response.FileResponse.__init__(self, path=path)
+        self.headers['cache-control'] = 'private, max-age=3600'
+        if download:
+            self.headers['content-type'] = 'application/octet-stream'
+            self.headers['content-disposition'] = 'attachment'
+            if remotePath:
+                self.headers['content-disposition'] += ('; filename=%s'
+                        % (remotePath,))
+        else:
+            # Trick the browser into displaying the file inline
+            self.headers['content-type'] = 'text/plain'
+
+        if gzipped:
+            self.headers['content-encoding'] = 'gzip'
+
 
 class RestController(controller.RestController):
 
@@ -95,7 +103,7 @@ class GetTrove(RestController):
         x = repquery.getTrove(cu, roleIds, name, version, flavor,
                               mkUrl = request.makeUrl, thisHost = request.host)
         if x is None:
-            raise NotImplementedError
+            return response.Response(status=404)
 
         return XMLResponse(xobj.toxml(x, None))
 
@@ -111,7 +119,7 @@ class GetTroves(RestController):
         x = repquery.getTroves(cu, roleIds, name, version,
                               mkUrl = request.makeUrl, thisHost = request.host)
         if x is None:
-            raise NotImplementedError
+            return response.Response(status=404)
 
         return XMLResponse(xobj.toxml(x, None))
 
@@ -126,25 +134,24 @@ class GetFile(RestController):
         x = repquery.getFileInfo(cu, roleIds, fileId, mkUrl = request.makeUrl,
                                  path = path)
         if x is None:
-            raise NotImplementedError
+            return response.Response(status=404)
 
         return XMLResponse(xobj.toxml(x, None))
 
     def content(self, request, cu, roleIds = None, fileId = None,
                 repos = None, **kwargs):
-        sha1 = repquery.getFileSha1(cu, roleIds, fileId)
+        sha1, isConfig = repquery.getFileSha1(cu, roleIds, fileId)
         if sha1 is None:
-            raise NotImplementedError
+            return response.Response(status=404)
 
         localPath = repos.repos.contentsStore.hashToPath(sha1)
-
-        remotePath = request.GET.get('path', None)
-        if remotePath:
-            remotePath += '.gz'
+        if request.unparsedPath:
+            remotePath = os.path.basename(request.unparsedPath)
         else:
-            remotePath = '%s.gz' % sha1
+            remotePath = sha1
+        return FileResponse(localPath, gzipped=True, remotePath=remotePath,
+                download=not isConfig)
 
-        return FileResponse(localPath, gzipped = True, remotePath = remotePath)
 
 class Controller(RestController):
 
