@@ -355,7 +355,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             kwargs[tagName] = buildTupleList(troveInfo[tag], tagName,
                                              mkUrl = mkUrl)
 
-    t = datamodel.SingleTrove(mkUrl = mkUrl, **kwargs)
+    t = datamodel.SingleTrove(mkUrl = mkUrl, thisHost = thisHost, **kwargs)
 
     if trove._TROVEINFO_TAG_CLONEDFROMLIST in troveInfo:
         clonedFromList = troveInfo[trove._TROVEINFO_TAG_CLONEDFROMLIST]
@@ -410,9 +410,9 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                 continue
 
             if baseName.endswith('-log.bz2'):
-                t.setBuildLog(logHost, sha1ToString(fileId), baseName)
+                t.setBuildLog(logHost, sha1ToString(fileId))
             elif baseName.endswith('-xml.bz2'):
-                t.setXMLBuildLog(logHost, sha1ToString(fileId), baseName)
+                t.setXMLBuildLog(logHost, sha1ToString(fileId))
 
     return t
 

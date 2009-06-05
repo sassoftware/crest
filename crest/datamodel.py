@@ -160,6 +160,14 @@ class DerivedFrom(ListOfTroves):
 
     DisplayName = "Derived from"
 
+class BuildLog(BaseObject):
+
+    _xobj = xobj.XObjMetadata(attributes = { 'id' : str } )
+
+    def __init__(self, fileId, host, thisHost = None, mkUrl = None):
+        BaseObject.__init__(self, id = mkUrl('logfile', fileId, host = host,
+                                             thisHost = thisHost))
+
 class SingleTrove(TroveIdent):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trove')
@@ -180,11 +188,13 @@ class SingleTrove(TroveIdent):
     crypto = [ str ]
     displayflavor = str
     buildlog = str
-    xmlbuildlog = str
+    xmlbuildlog = BuildLog
+    buildlog = BuildLog
 
-    def __init__(self, source = None, mkUrl = None, **kwargs):
+    def __init__(self, source = None, mkUrl = None, thisHost = None, **kwargs):
         TroveIdent.__init__(self, mkUrl = mkUrl, **kwargs)
         self._mkUrl = mkUrl
+        self._thisHost = thisHost
         if source:
             self.source = SourceTrove()
             self.source.append(name = source[0], version = source[1],
@@ -207,11 +217,13 @@ class SingleTrove(TroveIdent):
         self.clonedfrom.append(name = name, version = version,
                                flavor = flavor, mkUrl = mkUrl)
 
-    def setBuildLog(self, host, fileId, path):
-        self.buildlog = self._mkUrl('logfile', fileId, host = host)
+    def setBuildLog(self, host, fileId):
+        self.buildlog = BuildLog(fileId, host, mkUrl = self._mkUrl,
+                                 thisHost = self._thisHost)
 
-    def setXMLBuildLog(self, host, fileId, path):
-        self.xmlbuildlog = self._mkUrl('logfile', fileId, host = host)
+    def setXMLBuildLog(self, host, fileId):
+        self.xmlbuildlog = BuildLog(fileId, host, mkUrl = self._mkUrl,
+                                    thisHost = self._thisHost)
 
 class TroveList(BaseObject):
 
