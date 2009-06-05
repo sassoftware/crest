@@ -243,6 +243,7 @@ class Node(BaseObject):
     _xobj = xobj.XObjMetadata()
     name = str
     trovelist = TroveIdentList
+    fullnodelist = object
     version = VersionSummary
     flavor = str
     changeLog = ChangeLog
@@ -257,6 +258,11 @@ class Node(BaseObject):
                 TroveIdentList(id = mkUrl('troves', "%s=%s" %
                                                 (self.name, version),
                           host = host))
+            self.fullnodelist = \
+                TroveIdentList(id = mkUrl('node',
+                          [ ('label',  str(version.trailingLabel())),
+                            ('name',   self.name),
+                            ('latest', '0') ]))
 
 class NodeList(BaseObject):
     _xobj = xobj.XObjMetadata(attributes = { 'total' : int, 'start' : int,
@@ -267,6 +273,7 @@ class NodeList(BaseObject):
                changeLog = None, shortdesc = None):
         self.node.append(Node(name = name, version = version, mkUrl = mkUrl,
                               changeLog = changeLog, shortdesc = None))
+Node.fulltrovelist = NodeList           # circular type reference
 
 class NamedNodeList(NodeList):
     _xobj = xobj.XObjMetadata(tag = 'nodelist',

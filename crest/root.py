@@ -99,6 +99,10 @@ class GetNode(RestController):
     def index(self, request, cu = None, roleIds = None, repos = None, *args,
               **kwargs):
         label = request.GET.get('label', None)
+        name = request.GET.get('name', None)
+
+        latest = request.GET.get('latest', 1)
+        latest = (latest != '0')
 
         types = request.GET.get('type', [])
         if type(types) != list:
@@ -107,7 +111,8 @@ class GetNode(RestController):
 
         troves = repquery.searchNodes(cu, roleIds, label = label,
                                       mkUrl = request.makeUrl,
-                                      filterSet = types, db = repos.db)
+                                      filterSet = types, db = repos.db,
+                                      name = name, latest = latest)
         return XMLResponse(xobj.toxml(troves, None))
 
 class GetTrove(RestController):
@@ -118,14 +123,14 @@ class GetTrove(RestController):
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         label = request.GET.get('label', None)
         name = request.GET.get('name', None)
+
         latest = request.GET.get('latest', 1)
+        latest = (latest != '0')
 
         types = request.GET.get('type', [])
         if type(types) != list:
             types = [ types ]
         types = set(types)
-
-        latest = (latest != '0')
 
         start = int(request.GET.get('start', 0))
         if 'limit' in request.GET:

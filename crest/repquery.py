@@ -56,9 +56,9 @@ def typeFilter(l, filterSet):
     return filteredL
 
 def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
-                db = None):
+                db = None, name = None, latest = 1):
     args = []
-    d = { 'labelCheck' : '' }
+    d = { 'labelCheck' : '', 'itemCheck' : '' }
     d['roleIds'] = ",".join( str(x) for x in roleIds)
     d['SOURCENAME'] = trove._TROVEINFO_TAG_SOURCENAME
     d['METADATA'] = trove._TROVEINFO_TAG_METADATA
@@ -67,34 +67,70 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
         d['labelCheck'] = "label = ? AND"
         args.append(label)
 
-    cu.execute("""
-        SELECT item, version, ts, SourceNameTroveInfo.data,
-               MetadataTroveInfo.data FROM
-            (SELECT DISTINCT Nodes.itemId AS itemId,
-                             Nodes.versionId AS versionId,
-                             Nodes.timeStamps AS ts,
-                             MIN(Instances.instanceId) AS instanceId
-                FROM Labels
-                JOIN LabelMap USING (labelId)
-                JOIN LatestCache USING (itemId, branchId)
-                JOIN Nodes USING (itemId, versionId)
-                JOIN Instances USING (itemId, versionId)
-                WHERE %(labelCheck)s
-                      LatestCache.latestType = 1 AND
-                      LatestCache.userGroupId in (%(roleIds)s)
-                GROUP BY
-                      Nodes.itemId, Nodes.versionId, Nodes.timeStamps)
-            AS idTable
-            JOIN Items USING (itemId)
-            JOIN Versions ON (idTable.versionId = Versions.versionId)
-            LEFT OUTER JOIN TroveInfo AS SourceNameTroveInfo ON
-                idTable.instanceId = SourceNameTroveInfo.instanceId AND
-                SourceNameTroveInfo.infoType = %(SOURCENAME)d
-            LEFT OUTER JOIN TroveInfo AS MetadataTroveInfo ON
-                idTable.instanceId = MetadataTroveInfo.instanceId AND
-                MetadataTroveInfo.infoType = %(METADATA)d
-            ORDER BY item, version
-    """ % d, args)
+    if name:
+        d['itemCheck'] = "item = ? AND"
+        args.append(name)
+
+    if latest:
+        cu.execute("""
+            SELECT idTable.item, version, ts, SourceNameTroveInfo.data,
+                   MetadataTroveInfo.data FROM
+                (SELECT DISTINCT Items.item AS item,
+                                 Nodes.versionId AS versionId,
+                                 Nodes.timeStamps AS ts,
+                                 MIN(Instances.instanceId) AS instanceId
+                    FROM Labels
+                    JOIN LabelMap USING (labelId)
+                    JOIN LatestCache USING (itemId, branchId)
+                    JOIN Nodes USING (itemId, versionId)
+                    JOIN Instances USING (itemId, versionId)
+                    JOIN Items USING (itemId)
+                    WHERE %(labelCheck)s
+                          %(itemCheck)s
+                          LatestCache.latestType = 1 AND
+                          LatestCache.userGroupId in (%(roleIds)s)
+                    GROUP BY
+                          Items.item, Nodes.versionId, Nodes.timeStamps)
+                AS idTable
+                JOIN Versions ON (idTable.versionId = Versions.versionId)
+                LEFT OUTER JOIN TroveInfo AS SourceNameTroveInfo ON
+                    idTable.instanceId = SourceNameTroveInfo.instanceId AND
+                    SourceNameTroveInfo.infoType = %(SOURCENAME)d
+                LEFT OUTER JOIN TroveInfo AS MetadataTroveInfo ON
+                    idTable.instanceId = MetadataTroveInfo.instanceId AND
+                    MetadataTroveInfo.infoType = %(METADATA)d
+                ORDER BY item, version
+        """ % d, args)
+    else:
+        cu.execute("""
+            SELECT idTable.item, version, ts, SourceNameTroveInfo.data,
+                   MetadataTroveInfo.data FROM
+                (SELECT DISTINCT Items.item AS item,
+                                 Nodes.versionId AS versionId,
+                                 Nodes.timeStamps AS ts,
+                                 MIN(Instances.instanceId) AS instanceId
+                    FROM Labels
+                    JOIN LabelMap USING (labelId)
+                    JOIN Nodes USING (itemId, branchId)
+                    JOIN Instances USING (itemId, versionId)
+                    JOIN Items USING (itemId)
+                    JOIN usergroupinstancescache AS ugi ON
+                        Instances.instanceId = ugi.instanceId
+                    WHERE %(labelCheck)s
+                          %(itemCheck)s
+                          ugi.userGroupId in (%(roleIds)s)
+                    GROUP BY
+                          Items.item, Nodes.versionId, Nodes.timeStamps)
+                AS idTable
+                JOIN Versions ON (idTable.versionId = Versions.versionId)
+                LEFT OUTER JOIN TroveInfo AS SourceNameTroveInfo ON
+                    idTable.instanceId = SourceNameTroveInfo.instanceId AND
+                    SourceNameTroveInfo.infoType = %(SOURCENAME)d
+                LEFT OUTER JOIN TroveInfo AS MetadataTroveInfo ON
+                    idTable.instanceId = MetadataTroveInfo.instanceId AND
+                    MetadataTroveInfo.infoType = %(METADATA)d
+                ORDER BY item, version
+        """ % d, args)
 
     l = list(cu)
     filteredL = typeFilter(l, filterSet)
