@@ -269,6 +269,20 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
         return l
 
+    def fileQuery(gfcu, filesInstanceId, dirName = None):
+        # XXX restricing by dirName seems and obvious thing to do here,
+        # but it actually slows things down??
+        gfcu.execute("""
+            SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
+                JOIN Versions USING (versionId)
+                JOIN FileStreams ON (TroveFiles.streamId = FileStreams.streamId)
+                JOIN FilePaths ON (TroveFiles.filePathId = FilePaths.filePathId)
+                JOIN DirNames ON
+                    FilePaths.dirNameId = DirNames.dirNameId
+                JOIN Basenames ON (FilePaths.baseNameId = Basenames.baseNameId)
+                WHERE TroveFiles.instanceId = ? ORDER BY dirName, basename
+        """, filesInstanceId)
+
     cu.execute("""
         SELECT Instances.instanceId FROM Instances
             JOIN Items USING (itemId)
@@ -353,15 +367,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     for ver in clonedFromList:
         t.addClonedFrom(name, ver, flavor, mkUrl = mkUrl)
 
-    cu.execute("""
-        SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
-            JOIN Versions USING (versionId)
-            JOIN FileStreams ON (TroveFiles.streamId = FileStreams.streamId)
-            JOIN FilePaths ON (TroveFiles.filePathId = FilePaths.filePathId)
-            JOIN DirNames ON (FilePaths.dirNameId = DirNames.dirNameId)
-            JOIN Basenames ON (FilePaths.baseNameId = Basenames.baseNameId)
-            WHERE TroveFiles.instanceId = ? ORDER BY dirName, basename
-    """, instanceId)
+    fileQuery(cu, instanceId)
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
         fileObj = datamodel.FileReference(
@@ -373,7 +379,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         t.addFile(fileObj)
 
     cu.execute("""
-        SELECT item, version, flavor FROM TroveTroves
+        SELECT item, version, flavor, TroveTroves.includedId FROM TroveTroves
             JOIN Instances ON (Instances.instanceId = TroveTroves.includedId)
             JOIN Items USING (itemId)
             JOIN Versions ON (Versions.versionId = Instances.versionId)
@@ -384,10 +390,28 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             ORDER BY item, version, flavor
     """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
-    for (subName, subVersion, subFlavor) in cu:
+    for (subName, subVersion, subFlavor, refInstanceId) in cu:
         subFlavor = str(deps.ThawFlavor(subFlavor))
         t.addReferencedTrove(subName, versions.VersionFromString(subVersion),
                              subFlavor, mkUrl = mkUrl)
+
+        # It would be far better to use file tags to identify these build
+        # logs, but it's significantly slower as well because they're in
+        # the file objects rather than the trove (and those file objects
+        # could be stored on a different repository)
+        if not subName.endswith(':debuginfo'):
+            continue
+
+        fileQuery(cu, refInstanceId, dirName = '/usr/src/debug/buildlogs')
+        logHost = ver.trailingLabel().getHost()
+        for (dirName, baseName, fileVersion, pathId, fileId) in cu:
+            if (dirName) != '/usr/src/debug/buildlogs':
+                continue
+
+            if baseName.endswith('-log.bz2'):
+                t.setBuildLog(logHost, sha1ToString(fileId), baseName)
+            elif baseName.endswith('-xml.bz2'):
+                t.setXMLBuildLog(logHost, sha1ToString(fileId), baseName)
 
     return t
 

@@ -11,8 +11,9 @@
 # or fitness for a particular purpose. See the Common Public License for
 # full details.
 
-import os
+import gzip, os
 
+from conary.lib import util
 from restlib import controller
 from restlib import response
 from xobj import xobj
@@ -42,6 +43,50 @@ class FileResponse(response.FileResponse):
         if gzipped:
             self.headers['content-encoding'] = 'gzip'
 
+class CompressFileResponse(response.Response):
+
+    def getLength(self):
+        return None
+
+    def get(self):
+        class Output:
+
+            def write(self, stream):
+                self.s += stream
+
+            def get(self):
+                s = self.s
+                self.s = ''
+                return s
+
+            def __init__(self):
+                self.s = ''
+
+        # we read from self.fileObj, we write to the compressor, which sticks
+        # the data in the Output object. We read from the Output object and
+        # return it from the iterator so it can be sent to the requestor
+        output = Output()
+        compressor = gzip.GzipFile(None, "w", fileobj = output)
+
+        BUFSZ = 1024 * 32
+        s = self.fileObj.read(BUFSZ)
+        while s:
+            compressor.write(s)
+            compressed = output.get()
+            if compressed:
+                yield compressed
+            s = self.fileObj.read(BUFSZ)
+
+        yield output.get()
+
+    def __init__(self, fileObj):
+        response.Response.__init__(self)
+
+        self.fileObj = fileObj
+        # since this is based on a fileId, no reason for it to timeout
+        self.headers['cache-control'] = 'private'
+        self.headers['content-type'] = 'text/plain'
+        self.headers['content-encoding'] = 'gzip'
 
 class RestController(controller.RestController):
 
@@ -152,13 +197,29 @@ class GetFile(RestController):
         return FileResponse(localPath, gzipped=True, remotePath=remotePath,
                 download=not isConfig)
 
+class GetLogFile(RestController):
+
+    modelName = "fileId"
+
+    def get(self, request, cu, roleIds = None, fileId = None,
+            repos = None, **kwargs):
+        sha1, isConfig = repquery.getFileSha1(cu, roleIds, fileId)
+        if sha1 is None:
+            return response.Response(status=404)
+
+        localPath = repos.repos.contentsStore.hashToPath(sha1)
+        bzippedFile = gzip.GzipFile(localPath, "r")
+        uncompressedFile = util.BZ2File(bzippedFile)
+
+        return CompressFileResponse(uncompressedFile)
 
 class Controller(RestController):
 
     urls = { 'node'         : GetNode,
              'trove'        : GetTrove,
              'troves'       : GetTroves,
-             'file'         : GetFile }
+             'file'         : GetFile,
+             'logfile'      : GetLogFile }
 
     def index(self, request, cu = None, roleIds = None, *args, **kwargs):
         l = repquery.getRepository(cu, roleIds, mkUrl = request.makeUrl)

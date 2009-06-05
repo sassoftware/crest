@@ -179,9 +179,12 @@ class SingleTrove(TroveIdent):
     longdesc = str
     crypto = [ str ]
     displayflavor = str
+    buildlog = str
+    xmlbuildlog = str
 
     def __init__(self, source = None, mkUrl = None, **kwargs):
         TroveIdent.__init__(self, mkUrl = mkUrl, **kwargs)
+        self._mkUrl = mkUrl
         if source:
             self.source = SourceTrove()
             self.source.append(name = source[0], version = source[1],
@@ -203,6 +206,13 @@ class SingleTrove(TroveIdent):
 
         self.clonedfrom.append(name = name, version = version,
                                flavor = flavor, mkUrl = mkUrl)
+
+    def setBuildLog(self, host, fileId, path):
+        self.buildlog = self._mkUrl('logfile', fileId, host = host)
+
+    def setXMLBuildLog(self, host, fileId, path):
+        self.xmlbuildlog = self._mkUrl('logfile', fileId, host = host)
+
 class TroveList(BaseObject):
 
     _xobj = xobj.XObjMetadata(attributes = { 'id' : str }, tag = 'trovelist')
