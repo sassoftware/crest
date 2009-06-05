@@ -403,7 +403,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             continue
 
         fileQuery(cu, refInstanceId, dirName = '/usr/src/debug/buildlogs')
-        logHost = ver.trailingLabel().getHost()
+        logHost = \
+            versions.VersionFromString(subVersion).trailingLabel().getHost()
         for (dirName, baseName, fileVersion, pathId, fileId) in cu:
             if (dirName) != '/usr/src/debug/buildlogs':
                 continue

@@ -77,6 +77,8 @@ class CompressFileResponse(response.Response):
                 yield compressed
             s = self.fileObj.read(BUFSZ)
 
+        compressor.close()
+
         yield output.get()
 
     def __init__(self, fileObj):
