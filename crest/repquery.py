@@ -73,11 +73,12 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
 
     if latest:
         cu.execute("""
-            SELECT idTable.item, version, ts, SourceNameTroveInfo.data,
+            SELECT idTable.item, version, ts, finalTs, SourceNameTroveInfo.data,
                    MetadataTroveInfo.data FROM
                 (SELECT DISTINCT Items.item AS item,
                                  Nodes.versionId AS versionId,
                                  Nodes.timeStamps AS ts,
+                                 Nodes.finalTimeStamp as finalTs,
                                  MIN(Instances.instanceId) AS instanceId
                     FROM Labels
                     JOIN LabelMap USING (labelId)
@@ -90,7 +91,8 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
                           LatestCache.latestType = 1 AND
                           LatestCache.userGroupId in (%(roleIds)s)
                     GROUP BY
-                          Items.item, Nodes.versionId, Nodes.timeStamps)
+                          Items.item, Nodes.versionId, Nodes.timeStamps,
+                          Nodes.finalTimestamp)
                 AS idTable
                 JOIN Versions ON (idTable.versionId = Versions.versionId)
                 LEFT OUTER JOIN TroveInfo AS SourceNameTroveInfo ON
@@ -99,15 +101,15 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
                 LEFT OUTER JOIN TroveInfo AS MetadataTroveInfo ON
                     idTable.instanceId = MetadataTroveInfo.instanceId AND
                     MetadataTroveInfo.infoType = %(METADATA)d
-                ORDER BY item, version
         """ % d, args)
     else:
         cu.execute("""
-            SELECT idTable.item, version, ts, SourceNameTroveInfo.data,
+            SELECT idTable.item, version, ts, finalTs, SourceNameTroveInfo.data,
                    MetadataTroveInfo.data FROM
                 (SELECT DISTINCT Items.item AS item,
                                  Nodes.versionId AS versionId,
                                  Nodes.timeStamps AS ts,
+                                 Nodes.finalTimeStamp as finalTs,
                                  MIN(Instances.instanceId) AS instanceId
                     FROM Labels
                     JOIN LabelMap USING (labelId)
@@ -120,7 +122,8 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
                           %(itemCheck)s
                           ugi.userGroupId in (%(roleIds)s)
                     GROUP BY
-                          Items.item, Nodes.versionId, Nodes.timeStamps)
+                          Items.item, Nodes.versionId, Nodes.timeStamps,
+                          Nodes.finalTimestamp)
                 AS idTable
                 JOIN Versions ON (idTable.versionId = Versions.versionId)
                 LEFT OUTER JOIN TroveInfo AS SourceNameTroveInfo ON
@@ -129,16 +132,38 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
                 LEFT OUTER JOIN TroveInfo AS MetadataTroveInfo ON
                     idTable.instanceId = MetadataTroveInfo.instanceId AND
                     MetadataTroveInfo.infoType = %(METADATA)d
-                ORDER BY item, version
         """ % d, args)
 
     l = list(cu)
     filteredL = typeFilter(l, filterSet)
 
+    # sort based on (name, version, desc(finalTimestamp))
+    def sortorder(x, y):
+        c = cmp(x[0], y[0])
+        if c:
+            return c
+
+        return -(cmp(x[3], y[3]))
+
+    filteredL.sort(sortorder)
+
+    if latest:
+        # keep the latest
+        newL = []
+        last = None
+        for item in filteredL:
+            if last and last[0] == item[0]:
+                continue
+
+            newL.append(item)
+            last = item
+
+        filteredL = newL
+
     nodeList = datamodel.NamedNodeList(total = len(filteredL), start = 0)
 
     addList = []
-    for (name, version, ts, sourceName, metadata) in filteredL:
+    for (name, version, ts, finalTs, sourceName, metadata) in filteredL:
 	if sourceName is None and trove.troveIsSourceComponent(name):
             sourceName = name
         addList.append((sourceName,
@@ -162,8 +187,8 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
             LEFT OUTER JOIN ChangeLogs USING (nodeId)
     """)
 
-    for (name, version, ts, sourceName, metadata), (clName, clMessage) in \
-                    itertools.izip(filteredL, cu):
+    for ( (name, version, ts, finalTs, sourceName, metadata),
+          (clName, clMessage) ) in itertools.izip(filteredL, cu):
         frzVer = versions.strToFrozen(version,
                                       [ x for x in ts.split(":") ])
         ver = versions.ThawVersion(frzVer)
