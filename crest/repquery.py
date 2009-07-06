@@ -451,7 +451,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             ORDER BY item, version, flavor
     """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
-    for (subName, subVersion, subFlavor, refInstanceId) in cu:
+    for (subName, subVersion, subFlavor, refInstanceId) in list(cu):
         subFlavor = str(deps.ThawFlavor(subFlavor))
         t.addReferencedTrove(subName, versions.VersionFromString(subVersion),
                              subFlavor, mkUrl = mkUrl)
