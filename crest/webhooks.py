@@ -80,11 +80,10 @@ class StandaloneHandler:
     handlerClass = simplehttp.SimpleHttpHandler
 
     def handle(self, req, path):
-        return self.h.handle(req, path[self.prefixLen:])
+        return self.h.handle(req, pathPrefix=self.prefix)
 
     def __init__(self, rootUri, repos):
         self.prefix = rootUri
-        self.prefixLen = len(self.prefix)
         self.h = self.handlerClass(root.Controller(None, self.prefix))
         self.h.addCallback(AuthCallback())
         self.h.addCallback(ReposCallback(repos))
