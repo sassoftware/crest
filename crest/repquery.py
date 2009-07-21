@@ -480,7 +480,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 def getTroves(cu, roleIds, name, version, mkUrl = None,
               thisHost = None):
     cu.execute("""
-        SELECT flavor FROM Instances
+        SELECT DISTINCT flavor FROM Instances
             JOIN Items USING (itemId)
             JOIN Versions ON (Instances.versionId = Versions.versionId)
             JOIN Flavors ON (Instances.flavorId = Flavors.flavorId)
