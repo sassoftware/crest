@@ -333,8 +333,14 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     def fileQuery(gfcu, filesInstanceId, dirName = None):
         # XXX restricing by dirName seems and obvious thing to do here,
         # but it actually slows things down??
+        #
+        # the distinct here is unfortunate, but conary repositories had
+        # a bug for about a year which caused it to store duplicate paths
+        # if a path was committed for the first time duplicate times in
+        # a single commit job
         gfcu.execute("""
-            SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
+            SELECT DISTINCT dirName, basename, version, pathId, fileId
+                FROM TroveFiles
                 JOIN Versions USING (versionId)
                 JOIN FileStreams ON (TroveFiles.streamId = FileStreams.streamId)
                 JOIN FilePaths ON (TroveFiles.filePathId = FilePaths.filePathId)
