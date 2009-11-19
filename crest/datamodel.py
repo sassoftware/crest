@@ -103,11 +103,17 @@ class FileReference(BaseObject):
     version = str
     fileId = str
     pathId = str
+    isCapsule = int
 
     def __init__(self, mkUrl = None, fileId = None, version = None,
-                 thisHost = None, path = None, **kwargs):
+                 thisHost = None, path = None, pathId = None, **kwargs):
         BaseObject.__init__(self, fileId = fileId, version = version,
-                            path = path, **kwargs)
+                            pathId = pathId, path = path, **kwargs)
+        if (pathId == '0' * 32):
+            self.isCapsule = 1
+        else:
+            self.isCapsule = None
+
         if mkUrl:
             host = versions.VersionFromString(version).trailingLabel().getHost()
             self.inode = Inode(id = mkUrl('file', self.fileId, 'info',

@@ -12,7 +12,7 @@
 # full details.
 #
 
-import itertools, re
+import itertools, os, re
 
 import datamodel
 from conary import files, trove, versions
@@ -438,7 +438,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
         fileObj = datamodel.FileReference(
-                        path = dirName + '/' + baseName,
+                        path = os.path.join(dirName, baseName),
                         version = fileVersion,
                         pathId = md5ToString(cu.frombinary(pathId)),
                         fileId = sha1ToString(cu.frombinary(fileId)),
