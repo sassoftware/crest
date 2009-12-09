@@ -12,7 +12,7 @@
 # full details.
 #
 
-import itertools, re
+import itertools, os, re
 
 import datamodel
 from conary import files, trove, versions
@@ -320,7 +320,7 @@ def getRepository(cu, roleIds, mkUrl = None):
     return repository
 
 def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
-             thisHost = None, displayFlavor = None):
+             thisHost = None, displayFlavor = None, excludeCapsules = False):
 
     def buildTupleList(tuples, name, mkUrl = mkUrl):
         l = getattr(datamodel.SingleTrove, name)()
@@ -333,8 +333,14 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     def fileQuery(gfcu, filesInstanceId, dirName = None):
         # XXX restricing by dirName seems and obvious thing to do here,
         # but it actually slows things down??
+        #
+        # the distinct here is unfortunate, but conary repositories had
+        # a bug for about a year which caused it to store duplicate paths
+        # if a path was committed for the first time duplicate times in
+        # a single commit job
         gfcu.execute("""
-            SELECT dirName, basename, version, pathId, fileId FROM TroveFiles
+            SELECT DISTINCT dirName, basename, version, pathId, fileId
+                FROM TroveFiles
                 JOIN Versions USING (versionId)
                 JOIN FileStreams ON (TroveFiles.streamId = FileStreams.streamId)
                 JOIN FilePaths ON (TroveFiles.filePathId = FilePaths.filePathId)
@@ -379,6 +385,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                           trove._TROVEINFO_TAG_BUILDTIME,
                           trove._TROVEINFO_TAG_SIZE,
                           trove._TROVEINFO_TAG_METADATA,
+                          trove._TROVEINFO_TAG_CAPSULE,
                         ] + [ x[0] for x in tupleLists ]
                 ), instanceId)
 
@@ -428,14 +435,28 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     for ver in clonedFromList:
         t.addClonedFrom(name, ver, flavor, mkUrl = mkUrl)
 
+    hasCapsule = False
+    if trove._TROVEINFO_TAG_CAPSULE in troveInfo:
+        if troveInfo[trove._TROVEINFO_TAG_CAPSULE].type():
+            hasCapsule = True
+
     fileQuery(cu, instanceId)
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
+        if pathId == trove.CAPSULE_PATHID:
+            isCapsule = 1
+            contentAvailable = not excludeCapsules
+        else:
+            isCapsule = None
+            contentAvailable = not hasCapsule
+
         fileObj = datamodel.FileReference(
-                        path = dirName + '/' + baseName,
+                        path = os.path.join(dirName, baseName),
                         version = fileVersion,
                         pathId = md5ToString(cu.frombinary(pathId)),
                         fileId = sha1ToString(cu.frombinary(fileId)),
+                        isCapsule = isCapsule,
+                        contentAvailable = contentAvailable,
                         mkUrl = mkUrl, thisHost = thisHost)
         t.addFile(fileObj)
 
@@ -530,7 +551,8 @@ def _getFileStream(cu, roleIds, fileId):
     return None
 
 
-def getFileInfo(cu, roleIds, fileId, mkUrl = None, path = None):
+def getFileInfo(cu, roleIds, fileId, mkUrl = None, path = None,
+                noContent = False):
     f = _getFileStream(cu, roleIds, fileId)
     if f is None:
         return None
@@ -542,7 +564,7 @@ def getFileInfo(cu, roleIds, fileId, mkUrl = None, path = None):
     if f.lsTag == '-':
         fx = datamodel.RegularFile(size = int(f.contents.size()),
                                    sha1 = sha1ToString(f.contents.sha1()),
-                                   path = path,
+                                   path = path, withContentLink = not noContent,
                                    **args)
     elif f.lsTag == 'l':
         fx = datamodel.SymlinkFile(target = f.target(), **args)

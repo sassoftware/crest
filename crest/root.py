@@ -153,7 +153,8 @@ class GetTrove(RestController):
         flavor = flavor[:-1]
 
         x = repquery.getTrove(cu, roleIds, name, version, flavor,
-                mkUrl=request.makeUrl, thisHost=request.headers['Host'])
+                mkUrl=request.makeUrl, thisHost=request.headers['Host'],
+                excludeCapsules=kwargs['excludeCapsules'])
         if x is None:
             return response.Response(status=404)
 
@@ -183,8 +184,9 @@ class GetFile(RestController):
 
     def info(self, request, cu, roleIds = None, fileId = None, **kwargs):
         path = request.GET.get('path', None)
+        noContent = request.GET.get('nocontent', False)
         x = repquery.getFileInfo(cu, roleIds, fileId, mkUrl = request.makeUrl,
-                                 path = path)
+                                 path = path, noContent = noContent)
         if x is None:
             return response.Response(status=404)
 

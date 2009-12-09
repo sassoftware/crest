@@ -103,16 +103,20 @@ class FileReference(BaseObject):
     version = str
     fileId = str
     pathId = str
+    isCapsule = int
 
     def __init__(self, mkUrl = None, fileId = None, version = None,
-                 thisHost = None, path = None, **kwargs):
+                 thisHost = None, path = None, pathId = None,
+                 contentAvailable = None, **kwargs):
         BaseObject.__init__(self, fileId = fileId, version = version,
-                            path = path, **kwargs)
+                            pathId = pathId, path = path, **kwargs)
         if mkUrl:
             host = versions.VersionFromString(version).trailingLabel().getHost()
+            flags = [ ( 'path', os.path.basename(path)) ]
+            if not contentAvailable:
+                flags.append(( 'nocontent', '1'))
             self.inode = Inode(id = mkUrl('file', self.fileId, 'info',
-                               [ ( 'path', os.path.basename(path)) ],
-                               host = host))
+                               flags, host = host))
 
 class ListOfTroves(BaseObject):
 
@@ -321,9 +325,10 @@ class RegularFile(FileObj):
     sha1 = str
     content = Content
 
-    def __init__(self, mkUrl = None, fileId = None, path = None, **kwargs):
+    def __init__(self, mkUrl = None, fileId = None, path = None,
+                 withContentLink = True, **kwargs):
         FileObj.__init__(self, mkUrl = mkUrl, fileId = fileId, **kwargs)
-        if mkUrl:
+        if withContentLink and mkUrl:
             self.content = Content(href=mkUrl('file', fileId, 'content', path))
 
 
