@@ -173,10 +173,11 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
 
     # This is painful, but it converts the source name from a blob to
     # a string
-    db.bulkload("tmpNVF", addList, ["name", "version"],
+    db.bulkload("tmpNVF", [ (x[0],) + x[1] for x in enumerate(addList) ],
+                ["idx", "name", "version"],
                 start_transaction = False)
     cu.execute("""
-        SELECT ChangeLogs.name, ChangeLogs.message
+        SELECT ChangeLogs.name, ChangeLogs.message, tmpNVF.name
             FROM tmpNVF JOIN Items AS SourceItems ON
                 tmpNVF.name = SourceItems.item
             LEFT OUTER JOIN Versions AS SourceVersion ON
@@ -185,10 +186,11 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
                 SourceItems.itemId = Nodes.itemId AND
                 SourceVersion.versionId = Nodes.versionId
             LEFT OUTER JOIN ChangeLogs USING (nodeId)
+            ORDER BY tmpNVF.idx
     """)
 
     for ( (name, version, ts, finalTs, sourceName, metadata),
-          (clName, clMessage) ) in itertools.izip(filteredL, cu):
+          (clName, clMessage, clName) ) in itertools.izip(filteredL, cu):
         frzVer = versions.strToFrozen(version,
                                       [ x for x in ts.split(":") ])
         ver = versions.ThawVersion(frzVer)
