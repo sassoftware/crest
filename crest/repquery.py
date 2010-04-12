@@ -353,8 +353,9 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         """, filesInstanceId)
 
     cu.execute("""
-        SELECT Instances.instanceId FROM Instances
+        SELECT Instances.instanceId, Nodes.finalTimeStamp FROM Instances
             JOIN Items USING (itemId)
+            JOIN Nodes ON (Items.itemId = Nodes.itemId)
             JOIN Versions ON (Instances.versionId = Versions.versionId)
             JOIN Flavors ON (Instances.flavorId = Flavors.flavorId)
             JOIN UserGroupInstancesCache AS ugi
@@ -365,11 +366,12 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     """ % ",".join( str(x) for x in roleIds), name, version,
         deps.parseFlavor(flavor).freeze())
 
-    l = [ x[0] for x in cu ]
+    l = [ (x[0], x[1]) for x in cu ]
     if not l:
         return None
 
-    instanceId = l[0]
+    instanceId = l[0][0]
+    timeStamp = l[0][1]
 
     tupleLists = [ ( trove._TROVEINFO_TAG_BUILDDEPS, 'builddeps' ),
                    ( trove._TROVEINFO_TAG_POLICY_PROV, 'policyprovider' ),
@@ -394,7 +396,9 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     troveInfo = dict(
             (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
 
-    kwargs = { 'name' : name, 'version' : versions.VersionFromString(version),
+    kwargs = { 'name' : name,
+               'version' : versions.VersionFromString(version, timeStamps = [
+               timeStamp ]),
                'flavor' : flavor }
 
     if displayFlavor is not None:
