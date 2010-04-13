@@ -467,9 +467,12 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         t.addFile(fileObj)
 
     cu.execute("""
-        SELECT item, version, flavor, TroveTroves.includedId FROM TroveTroves
+        SELECT item, version, flavor, TroveTroves.includedId,
+               Nodes.finalTimeStamp
+          FROM TroveTroves
             JOIN Instances ON (Instances.instanceId = TroveTroves.includedId)
             JOIN Items USING (itemId)
+            JOIN Nodes USING (itemId)
             JOIN Versions ON (Versions.versionId = Instances.versionId)
             JOIN Flavors ON (Flavors.flavorId = Instances.flavorId)
             WHERE
@@ -478,10 +481,10 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             ORDER BY item, version, flavor
     """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
-    for (subName, subVersion, subFlavor, refInstanceId) in list(cu):
+    for (subName, subVersion, subFlavor, refInstanceId, subTS) in list(cu):
         subFlavor = str(deps.ThawFlavor(subFlavor))
-        t.addReferencedTrove(subName, versions.VersionFromString(subVersion),
-                             subFlavor, mkUrl = mkUrl)
+        subV = versions.VersionFromString(subVersion, timeStamps = [ subTS ])
+        t.addReferencedTrove(subName, subV, subFlavor, mkUrl = mkUrl)
 
         # It would be far better to use file tags to identify these build
         # logs, but it's significantly slower as well because they're in
