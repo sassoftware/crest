@@ -354,8 +354,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     cu.execute("""
         SELECT Instances.instanceId, Nodes.finalTimeStamp FROM Instances
+            JOIN Nodes USING (itemId, versionId)
             JOIN Items USING (itemId)
-            JOIN Nodes ON (Items.itemId = Nodes.itemId)
             JOIN Versions ON (Instances.versionId = Versions.versionId)
             JOIN Flavors ON (Instances.flavorId = Flavors.flavorId)
             JOIN UserGroupInstancesCache AS ugi
@@ -471,8 +471,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                Nodes.finalTimeStamp
           FROM TroveTroves
             JOIN Instances ON (Instances.instanceId = TroveTroves.includedId)
+            JOIN Nodes USING (itemId, versionId)
             JOIN Items USING (itemId)
-            JOIN Nodes USING (itemId)
             JOIN Versions ON (Versions.versionId = Instances.versionId)
             JOIN Flavors ON (Flavors.flavorId = Instances.flavorId)
             WHERE
