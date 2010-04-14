@@ -372,6 +372,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     instanceId = l[0][0]
     timeStamp = l[0][1]
+    verobj = versions.VersionFromString(version, timeStamps = [ timeStamp ])
 
     tupleLists = [ ( trove._TROVEINFO_TAG_BUILDDEPS, 'builddeps' ),
                    ( trove._TROVEINFO_TAG_POLICY_PROV, 'policyprovider' ),
@@ -397,8 +398,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
 
     kwargs = { 'name' : name,
-               'version' : versions.VersionFromString(version, timeStamps = [
-               timeStamp ]),
+               'version' : verobj,
                'flavor' : flavor }
 
     if displayFlavor is not None:
@@ -409,7 +409,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     if trove._TROVEINFO_TAG_SOURCENAME in troveInfo:
         kwargs['source'] = (troveInfo[trove._TROVEINFO_TAG_SOURCENAME](),
-            versions.VersionFromString(version).getSourceVersion(), '')
+            verobj.getSourceVersion(), '')
 
     if trove._TROVEINFO_TAG_SIZE in troveInfo:
         kwargs['size'] = troveInfo[trove._TROVEINFO_TAG_SIZE]()
