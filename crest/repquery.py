@@ -353,7 +353,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         """, filesInstanceId)
 
     cu.execute("""
-        SELECT Instances.instanceId FROM Instances
+        SELECT Instances.instanceId, Nodes.finalTimeStamp FROM Instances
+            JOIN Nodes USING (itemId, versionId)
             JOIN Items USING (itemId)
             JOIN Versions ON (Instances.versionId = Versions.versionId)
             JOIN Flavors ON (Instances.flavorId = Flavors.flavorId)
@@ -365,11 +366,13 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     """ % ",".join( str(x) for x in roleIds), name, version,
         deps.parseFlavor(flavor).freeze())
 
-    l = [ x[0] for x in cu ]
+    l = [ (x[0], x[1]) for x in cu ]
     if not l:
         return None
 
-    instanceId = l[0]
+    instanceId = l[0][0]
+    timeStamp = l[0][1]
+    verobj = versions.VersionFromString(version, timeStamps = [ timeStamp ])
 
     tupleLists = [ ( trove._TROVEINFO_TAG_BUILDDEPS, 'builddeps' ),
                    ( trove._TROVEINFO_TAG_POLICY_PROV, 'policyprovider' ),
@@ -394,7 +397,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     troveInfo = dict(
             (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
 
-    kwargs = { 'name' : name, 'version' : versions.VersionFromString(version),
+    kwargs = { 'name' : name,
+               'version' : verobj,
                'flavor' : flavor }
 
     if displayFlavor is not None:
@@ -405,7 +409,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
 
     if trove._TROVEINFO_TAG_SOURCENAME in troveInfo:
         kwargs['source'] = (troveInfo[trove._TROVEINFO_TAG_SOURCENAME](),
-            versions.VersionFromString(version).getSourceVersion(), '')
+            verobj.getSourceVersion(), '')
 
     if trove._TROVEINFO_TAG_SIZE in troveInfo:
         kwargs['size'] = troveInfo[trove._TROVEINFO_TAG_SIZE]()
@@ -463,8 +467,11 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         t.addFile(fileObj)
 
     cu.execute("""
-        SELECT item, version, flavor, TroveTroves.includedId FROM TroveTroves
+        SELECT item, version, flavor, TroveTroves.includedId,
+               Nodes.finalTimeStamp
+          FROM TroveTroves
             JOIN Instances ON (Instances.instanceId = TroveTroves.includedId)
+            JOIN Nodes USING (itemId, versionId)
             JOIN Items USING (itemId)
             JOIN Versions ON (Versions.versionId = Instances.versionId)
             JOIN Flavors ON (Flavors.flavorId = Instances.flavorId)
@@ -474,10 +481,10 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             ORDER BY item, version, flavor
     """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
-    for (subName, subVersion, subFlavor, refInstanceId) in list(cu):
+    for (subName, subVersion, subFlavor, refInstanceId, subTS) in list(cu):
         subFlavor = str(deps.ThawFlavor(subFlavor))
-        t.addReferencedTrove(subName, versions.VersionFromString(subVersion),
-                             subFlavor, mkUrl = mkUrl)
+        subV = versions.VersionFromString(subVersion, timeStamps = [ subTS ])
+        t.addReferencedTrove(subName, subV, subFlavor, mkUrl = mkUrl)
 
         # It would be far better to use file tags to identify these build
         # logs, but it's significantly slower as well because they're in
