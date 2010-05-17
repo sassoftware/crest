@@ -190,7 +190,7 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
     """)
 
     for ( (name, version, ts, finalTs, sourceName, metadata),
-          (clName, clMessage, clName) ) in itertools.izip(filteredL, cu):
+          (clName, clMessage, troveName) ) in itertools.izip(filteredL, cu):
         frzVer = versions.strToFrozen(version,
                                       [ x for x in ts.split(":") ])
         ver = versions.ThawVersion(frzVer)
