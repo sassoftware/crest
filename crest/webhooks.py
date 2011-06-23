@@ -30,11 +30,13 @@ class ReposCallback:
     def processMethod(self, request, method, args, kwargs):
         cu = self.repos.db.cursor()
 
-        entitlementList = webauth.parseEntitlement(
-                            request.headers.get('X-Conary-Entitlement', ''))
-        if getattr(request, 'auth', None) is None:
-            request.auth = ('anonymous', 'anonymous')
-        authToken = ( request.auth[0], request.auth[1], entitlementList )
+        authToken = getattr(request, 'authToken', None)
+        if not authToken:
+            entitlementList = webauth.parseEntitlement(
+                                request.headers.get('X-Conary-Entitlement', ''))
+            if getattr(request, 'auth', None) is None:
+                request.auth = ('anonymous', 'anonymous')
+            authToken = ( request.auth[0], request.auth[1], entitlementList )
 
         kwargs['repos'] = self.repos
         kwargs['roleIds'] = self.repos.auth.getAuthRoles(cu, authToken)
