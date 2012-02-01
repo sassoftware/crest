@@ -353,7 +353,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         """, filesInstanceId)
 
     cu.execute("""
-        SELECT Instances.instanceId, Nodes.finalTimeStamp FROM Instances
+        SELECT Instances.instanceId, Nodes.timeStamps FROM Instances
             JOIN Nodes USING (itemId, versionId)
             JOIN Items USING (itemId)
             JOIN Versions ON (Instances.versionId = Versions.versionId)
@@ -370,9 +370,9 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     if not l:
         return None
 
-    instanceId = l[0][0]
-    timeStamp = l[0][1]
-    verobj = versions.VersionFromString(version, timeStamps = [ timeStamp ])
+    instanceId, timeStamps = l[0]
+    frzVer = versions.strToFrozen(version, timeStamps.split(":"))
+    verobj = versions.ThawVersion(frzVer)
 
     tupleLists = [ ( trove._TROVEINFO_TAG_BUILDDEPS, 'builddeps' ),
                    ( trove._TROVEINFO_TAG_POLICY_PROV, 'policyprovider' ),
