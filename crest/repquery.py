@@ -449,6 +449,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     fileQuery(cu, instanceId)
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
+        dirName = cu.frombinary(dirName)
+        baseName = cu.frombinary(baseName)
         if pathId == trove.CAPSULE_PATHID:
             isCapsule = 1
             contentAvailable = not excludeCapsules
