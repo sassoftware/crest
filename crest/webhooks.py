@@ -15,8 +15,6 @@
 import restlib.auth
 from restlib import response
 from restlib.http import simplehttp
-from restlib.http import modpython as restmodpython
-from restlib.http import wsgi as rl_wsgi
 from conary.web import webauth
 
 from crest import root
@@ -91,10 +89,17 @@ class StandaloneHandler:
         self.h.addCallback(AuthCallback())
         self.h.addCallback(ReposCallback(repos))
 
-class ApacheHandler(StandaloneHandler):
+try:
+    from restlib.http import modpython as restmodpython
+    class ApacheHandler(StandaloneHandler):
+        handlerClass = restmodpython.ModPythonHttpHandler
+except ImportError:
+    pass
 
-    handlerClass = restmodpython.ModPythonHttpHandler
 
-
-class WSGIHandler(StandaloneHandler):
-    handlerClass = rl_wsgi.WSGIHandler
+try:
+    from restlib.http import wsgi as rl_wsgi
+    class WSGIHandler(StandaloneHandler):
+        handlerClass = rl_wsgi.WSGIHandler
+except ImportError:
+    pass
