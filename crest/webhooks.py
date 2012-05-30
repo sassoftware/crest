@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009 rPath, Inc.
+# Copyright (c) 2011 rPath, Inc.
 #
 # This program is distributed under the terms of the Common Public License,
 # version 1.0. A copy of this license should have been distributed with this
@@ -15,12 +15,10 @@
 import restlib.auth
 from restlib import response
 from restlib.http import simplehttp
-from restlib.http import modpython as restmodpython
 from conary.web import webauth
-import sys
-import urllib
 
-import root
+from crest import root
+
 
 class ReposCallback:
 
@@ -91,6 +89,17 @@ class StandaloneHandler:
         self.h.addCallback(AuthCallback())
         self.h.addCallback(ReposCallback(repos))
 
-class ApacheHandler(StandaloneHandler):
+try:
+    from restlib.http import modpython as restmodpython
+    class ApacheHandler(StandaloneHandler):
+        handlerClass = restmodpython.ModPythonHttpHandler
+except ImportError:
+    pass
 
-    handlerClass = restmodpython.ModPythonHttpHandler
+
+try:
+    from restlib.http import wsgi as rl_wsgi
+    class WSGIHandler(StandaloneHandler):
+        handlerClass = rl_wsgi.WSGIHandler
+except ImportError:
+    pass

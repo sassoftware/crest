@@ -1,4 +1,8 @@
-(^|/)\.hg($|/)
-.*\.pyc$
-.*\~$
-.*,cover$
+\.pyc$
+\.pyo$
+\.swp$
+\.swo$
+\.orig$
+\.rej$
+~$
+,cover$

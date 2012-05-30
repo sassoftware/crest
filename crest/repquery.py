@@ -164,7 +164,8 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
 
     addList = []
     for (name, version, ts, finalTs, sourceName, metadata) in filteredL:
-	if sourceName is None and trove.troveIsSourceComponent(name):
+        sourceName = cu.frombinary(sourceName)
+        if sourceName is None and trove.troveIsSourceComponent(name):
             sourceName = name
         addList.append((sourceName,
                 str(versions.VersionFromString(version).getSourceVersion())))
@@ -198,6 +199,7 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
         shortdesc = None
 
         if metadata:
+            metadata = cu.frombinary(metadata)
             md = trove.Metadata(metadata)
             shortdesc = md.get()['shortDesc']
 
@@ -353,7 +355,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         """, filesInstanceId)
 
     cu.execute("""
-        SELECT Instances.instanceId, Nodes.finalTimeStamp FROM Instances
+        SELECT Instances.instanceId, Nodes.timeStamps FROM Instances
             JOIN Nodes USING (itemId, versionId)
             JOIN Items USING (itemId)
             JOIN Versions ON (Instances.versionId = Versions.versionId)
@@ -370,9 +372,9 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     if not l:
         return None
 
-    instanceId = l[0][0]
-    timeStamp = l[0][1]
-    verobj = versions.VersionFromString(version, timeStamps = [ timeStamp ])
+    instanceId, timeStamps = l[0]
+    frzVer = versions.strToFrozen(version, timeStamps.split(":"))
+    verobj = versions.ThawVersion(frzVer)
 
     tupleLists = [ ( trove._TROVEINFO_TAG_BUILDDEPS, 'builddeps' ),
                    ( trove._TROVEINFO_TAG_POLICY_PROV, 'policyprovider' ),
@@ -394,8 +396,11 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                         ] + [ x[0] for x in tupleLists ]
                 ), instanceId)
 
-    troveInfo = dict(
-            (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
+    troveInfo = {}
+    for infoType, data in cu:
+        data = cu.frombinary(data)
+        infoClass = trove.TroveInfo.streamDict[infoType][1]
+        troveInfo[infoType] = infoClass(data)
 
     kwargs = { 'name' : name,
                'version' : verobj,
@@ -449,6 +454,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     fileQuery(cu, instanceId)
 
     for (dirName, baseName, fileVersion, pathId, fileId) in cu:
+        dirName = cu.frombinary(dirName)
+        baseName = cu.frombinary(baseName)
         if pathId == trove.CAPSULE_PATHID:
             isCapsule = 1
             contentAvailable = not excludeCapsules
@@ -467,8 +474,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         t.addFile(fileObj)
 
     cu.execute("""
-        SELECT item, version, flavor, TroveTroves.includedId,
-               Nodes.finalTimeStamp
+        SELECT item, version, flavor, TroveTroves.includedId, Nodes.timeStamps
           FROM TroveTroves
             JOIN Instances ON (Instances.instanceId = TroveTroves.includedId)
             JOIN Nodes USING (itemId, versionId)
@@ -481,9 +487,11 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             ORDER BY item, version, flavor
     """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
-    for (subName, subVersion, subFlavor, refInstanceId, subTS) in list(cu):
+    for (subName, subVersion, subFlavor, refInstanceId, subTS) in cu:
         subFlavor = str(deps.ThawFlavor(subFlavor))
-        subV = versions.VersionFromString(subVersion, timeStamps = [ subTS ])
+        frzVer = versions.strToFrozen(subVersion,
+                [ x for x in subTS.split(":") ])
+        subV = versions.ThawVersion(frzVer)
         t.addReferencedTrove(subName, subV, subFlavor, mkUrl = mkUrl)
 
         # It would be far better to use file tags to identify these build
@@ -494,8 +502,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             continue
 
         fileQuery(cu, refInstanceId, dirName = '/usr/src/debug/buildlogs')
-        logHost = \
-            versions.VersionFromString(subVersion).trailingLabel().getHost()
+        logHost = subV.getHost()
         for (dirName, baseName, fileVersion, pathId, fileId) in cu:
             if (dirName) != '/usr/src/debug/buildlogs':
                 continue
