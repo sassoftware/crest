@@ -164,7 +164,8 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
 
     addList = []
     for (name, version, ts, finalTs, sourceName, metadata) in filteredL:
-	if sourceName is None and trove.troveIsSourceComponent(name):
+        sourceName = cu.frombinary(sourceName)
+        if sourceName is None and trove.troveIsSourceComponent(name):
             sourceName = name
         addList.append((sourceName,
                 str(versions.VersionFromString(version).getSourceVersion())))
@@ -198,6 +199,7 @@ def searchNodes(cu, roleIds, label = None, mkUrl = None, filterSet = None,
         shortdesc = None
 
         if metadata:
+            metadata = cu.frombinary(metadata)
             md = trove.Metadata(metadata)
             shortdesc = md.get()['shortDesc']
 
@@ -394,8 +396,11 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
                         ] + [ x[0] for x in tupleLists ]
                 ), instanceId)
 
-    troveInfo = dict(
-            (x[0], trove.TroveInfo.streamDict[x[0]][1](x[1])) for x in cu )
+    troveInfo = {}
+    for infoType, data in cu:
+        data = cu.frombinary(data)
+        info = trove.TroveInfo.streamDict[infoType](data)
+        troveInfo[info] = info
 
     kwargs = { 'name' : name,
                'version' : verobj,
