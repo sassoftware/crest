@@ -399,8 +399,8 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
     troveInfo = {}
     for infoType, data in cu:
         data = cu.frombinary(data)
-        info = trove.TroveInfo.streamDict[infoType](data)
-        troveInfo[info] = info
+        infoClass = trove.TroveInfo.streamDict[infoType][1]
+        troveInfo[infoType] = infoClass(data)
 
     kwargs = { 'name' : name,
                'version' : verobj,
@@ -474,8 +474,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         t.addFile(fileObj)
 
     cu.execute("""
-        SELECT item, version, flavor, TroveTroves.includedId,
-               Nodes.finalTimeStamp
+        SELECT item, version, flavor, TroveTroves.includedId, Nodes.timeStamps
           FROM TroveTroves
             JOIN Instances ON (Instances.instanceId = TroveTroves.includedId)
             JOIN Nodes USING (itemId, versionId)
@@ -488,9 +487,11 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             ORDER BY item, version, flavor
     """ % schema.TROVE_TROVES_WEAKREF, instanceId)
 
-    for (subName, subVersion, subFlavor, refInstanceId, subTS) in list(cu):
+    for (subName, subVersion, subFlavor, refInstanceId, subTS) in cu:
         subFlavor = str(deps.ThawFlavor(subFlavor))
-        subV = versions.VersionFromString(subVersion, timeStamps = [ subTS ])
+        frzVer = versions.strToFrozen(subVersion,
+                [ x for x in subTS.split(":") ])
+        subV = versions.ThawVersion(frzVer)
         t.addReferencedTrove(subName, subV, subFlavor, mkUrl = mkUrl)
 
         # It would be far better to use file tags to identify these build
@@ -501,8 +502,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
             continue
 
         fileQuery(cu, refInstanceId, dirName = '/usr/src/debug/buildlogs')
-        logHost = \
-            versions.VersionFromString(subVersion).trailingLabel().getHost()
+        logHost = subV.getHost()
         for (dirName, baseName, fileVersion, pathId, fileId) in cu:
             if (dirName) != '/usr/src/debug/buildlogs':
                 continue
