@@ -27,11 +27,6 @@ from conary_test.auth_helper import AuthHelper
 from conary import trove
 from conary.lib import util
 
-import restlib
-import restlib.auth
-import restlib.http.handler
-import restlib.http.simplehttp
-
 from crest import datamodel
 
 from conary import versions

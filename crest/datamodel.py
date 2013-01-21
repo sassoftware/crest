@@ -15,7 +15,7 @@
 #
 
 
-import copy, os, urllib
+import copy, os
 
 from xobj import xobj
 from conary import versions
