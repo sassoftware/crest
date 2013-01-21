@@ -15,33 +15,19 @@
 #
 
 
-all: all-subdirs default-all
+class ConaryREST(CPackageRecipe):
+    name = 'conary-rest'
+    version = '0'
 
-all-subdirs:
-	for d in $(MAKEALLSUBDIRS); do make -C $$d DIR=$$d || exit 1; done
+    buildRequires = [
+        'conary:python',
+        'conary-repository:python',
+        'python:devel',
+        'restlib:python',
+        'xobj:python',
+      ]
 
-export TOPDIR = $(shell pwd)
-
-SUBDIRS=crest
-MAKEALLSUBDIRS=crest
-
-
-.PHONY: all clean install all-subdirs default-all
-
-subdirs: default-subdirs
-
-install: install-subdirs
-
-clean: clean-subdirs default-clean
-
-doc: html
-
-archive:
-	hg archive  --exclude .hgignore -t tbz2 conary-rest-$(VERSION).tar.bz2
-
-clean: clean-subdirs default-clean
-
-include Make.rules
-include Make.defs
- 
-# vim: set sts=8 sw=8 noexpandtab :
+    def setup(r):
+        r.addMercurialSnapshot('http://hg.rpath.com/conary-rest')
+        r.Make()
+        r.MakeInstall()

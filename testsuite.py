@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #
 # Copyright (c) SAS Institute Inc.
 #
@@ -15,33 +16,23 @@
 #
 
 
-all: all-subdirs default-all
+import sys
 
-all-subdirs:
-	for d in $(MAKEALLSUBDIRS); do make -C $$d DIR=$$d || exit 1; done
-
-export TOPDIR = $(shell pwd)
-
-SUBDIRS=crest
-MAKEALLSUBDIRS=crest
+from testrunner import suite, testhandler
 
 
-.PHONY: all clean install all-subdirs default-all
+class Suite(suite.TestSuite):
+    testsuite_module = sys.modules[__name__]
+    suiteClass = testhandler.ConaryTestSuite
 
-subdirs: default-subdirs
+    def getCoverageDirs(self, handler, environ):
+        import crest
+        return [crest]
 
-install: install-subdirs
 
-clean: clean-subdirs default-clean
+_s = Suite()
+setup = _s.setup
+main = _s.main
 
-doc: html
-
-archive:
-	hg archive  --exclude .hgignore -t tbz2 conary-rest-$(VERSION).tar.bz2
-
-clean: clean-subdirs default-clean
-
-include Make.rules
-include Make.defs
- 
-# vim: set sts=8 sw=8 noexpandtab :
+if __name__ == '__main__':
+    _s.run()
