@@ -22,7 +22,6 @@ class ConaryREST(CPackageRecipe):
     buildRequires = [
         'conary:python',
         'conary-repository:python',
-        'python:devel',
         'restlib:python',
         'xobj:python',
       ]
