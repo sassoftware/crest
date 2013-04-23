@@ -79,6 +79,17 @@ class AuthCallback(restlib.auth.BasicAuthCallback):
 
         return auth
 
+
+class PreauthenticatedCallback(object):
+
+    def __init__(self, authToken=None):
+        self.authToken = authToken
+
+    def processRequest(self, request):
+        if self.authToken:
+            request.authToken = self.authToken
+
+
 class StandaloneHandler:
 
     handlerClass = simplehttp.SimpleHttpHandler
@@ -86,10 +97,13 @@ class StandaloneHandler:
     def handle(self, req, path):
         return self.h.handle(req, pathPrefix=self.prefix)
 
-    def __init__(self, rootUri, repos):
+    def __init__(self, rootUri, repos, authToken=None):
         self.prefix = rootUri
         self.h = self.handlerClass(root.Controller(None, self.prefix))
-        self.h.addCallback(AuthCallback())
+        if authToken:
+            self.h.addCallback(PreauthenticatedCallback(authToken))
+        else:
+            self.h.addCallback(AuthCallback())
         self.h.addCallback(ReposCallback(repos))
 
 try:
