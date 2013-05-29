@@ -6,3 +6,6 @@
 \.rej$
 ~$
 ,cover$
+\.times
+\.coverage
+annotate/
