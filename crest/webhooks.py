@@ -42,7 +42,6 @@ class ReposCallback:
         kwargs['repos'] = self.repos
         kwargs['roleIds'] = self.repos.auth.getAuthRoles(cu, authToken)
         kwargs['cu'] = cu
-        kwargs['excludeCapsules'] = self.repos.excludeCapsuleContents
 
         if not kwargs['roleIds']:
             return response.Response(status=403)

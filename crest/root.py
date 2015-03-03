@@ -157,8 +157,7 @@ class GetTrove(RestController):
         flavor = flavor[:-1]
 
         x = repquery.getTrove(cu, roleIds, name, version, flavor,
-                mkUrl=request.makeUrl, thisHost=request.headers['Host'],
-                excludeCapsules=kwargs['excludeCapsules'])
+                mkUrl=request.makeUrl, thisHost=request.headers['Host'])
         if x is None:
             return response.Response(status=404)
 

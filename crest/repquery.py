@@ -327,7 +327,7 @@ def getRepository(cu, roleIds, mkUrl = None):
     return repository
 
 def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
-             thisHost = None, displayFlavor = None, excludeCapsules = False):
+        thisHost = None, displayFlavor = None):
 
     def buildTupleList(tuples, name, mkUrl = mkUrl):
         l = getattr(datamodel.SingleTrove, name)()
@@ -461,7 +461,7 @@ def getTrove(cu, roleIds, name, version, flavor, mkUrl = None,
         baseName = cu.frombinary(baseName)
         if pathId == trove.CAPSULE_PATHID:
             isCapsule = 1
-            contentAvailable = not excludeCapsules
+            contentAvailable = True
         else:
             isCapsule = None
             contentAvailable = not hasCapsule
