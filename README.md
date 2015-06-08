@@ -7,14 +7,14 @@ Overview
 This API appears as /api/ under the conary repository.
 
 ### /
-    Returns a list of all of the labels which contain troves the user
-    has access to. As well as a <trovelist> with an id for seeing all
-    of the troves the user may access.
+Returns a list of all of the labels which contain troves the user
+has access to. As well as a <trovelist> with an id for seeing all
+of the troves the user may access.
 
 ### /trove
-    Returns name, version, and flavor for all of the troves the user
-    has access to. Results can be limited by using one or more parameters.
-    The parameters are logically ANDed together.
+Returns name, version, and flavor for all of the troves the user
+has access to. Results can be limited by using one or more parameters.
+The parameters are logically ANDed together.
 
     label=<conary label>
     name=<regex>
@@ -38,21 +38,21 @@ This API appears as /api/ under the conary repository.
     count=<int>
         The maximum number of matches to return.
 
-### /trove/<name>=<version>[<flavor>]
-    Returns information on the trove specified.
+### /trove/&lt;name&gt;=&lt;version&gt;[&lt;flavor&gt;]
+Returns information on the trove specified.
 
-### /file/<fileId>/info
-    Returns metadata associated with the file specified. The fileId must
-    be a sha1 string.
+### /file/&lt;fileId&gt;/info
+Returns metadata associated with the file specified. The fileId must
+be a sha1 string.
 
-### /file/<fileId>/content
-    Returns the gzipped contents of the file specified.
+### /file/&lt;fileId&gt;/content
+Returns the gzipped contents of the file specified.
 
 ### /node
-    Returns nodes, which are name/version pairs. The search can be restricted
-    using label and type, which are the same as the search parameters for
-    /trove.
+Returns nodes, which are name/version pairs. The search can be restricted
+using label and type, which are the same as the search parameters for
+/trove.
 
-### /troves/<name>=<version>
-    Returns a list of troves which match the name/version given. Note that
-    the objects returned are full troves.
+### /troves/&lt;name&gt;=&lt;version&gt;
+Returns a list of troves which match the name/version given. Note that
+the objects returned are full troves.
