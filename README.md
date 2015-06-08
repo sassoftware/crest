@@ -1,0 +1,58 @@
+CREST - Conary REST API
+=======================
+
+Overview
+--------
+
+This API appears as /api/ under the conary repository.
+
+### /
+    Returns a list of all of the labels which contain troves the user
+    has access to. As well as a <trovelist> with an id for seeing all
+    of the troves the user may access.
+
+### /trove
+    Returns name, version, and flavor for all of the troves the user
+    has access to. Results can be limited by using one or more parameters.
+    The parameters are logically ANDed together.
+
+    label=<conary label>
+    name=<regex>
+    latest=<int>
+        If latest is 0, all results are returned, otherwise only the
+        more recent results for a given label are returned. If this
+        parameter is ommitted, only the latest results are returned.
+    type=<type>
+        Type is one of:
+            group
+            package
+            component
+            fileset
+            collection
+            source
+            binarycomponent
+    first=<int>
+        The first item returned from the matches is number <int> (counting
+        from zero). The total number of matches is always available
+        via the 'total' attribute of the trovelist element.
+    count=<int>
+        The maximum number of matches to return.
+
+### /trove/<name>=<version>[<flavor>]
+    Returns information on the trove specified.
+
+### /file/<fileId>/info
+    Returns metadata associated with the file specified. The fileId must
+    be a sha1 string.
+
+### /file/<fileId>/content
+    Returns the gzipped contents of the file specified.
+
+### /node
+    Returns nodes, which are name/version pairs. The search can be restricted
+    using label and type, which are the same as the search parameters for
+    /trove.
+
+### /troves/<name>=<version>
+    Returns a list of troves which match the name/version given. Note that
+    the objects returned are full troves.
